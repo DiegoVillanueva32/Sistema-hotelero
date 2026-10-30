@@ -6,7 +6,35 @@
   {% if piso_seleccionado %}<a class="btn bg-slate-800 text-slate-200" href="{{ url_for('main.habitaciones') }}">← Ver los 5 pisos</a>{% endif %}
 </div>
 
-{% if not piso_seleccionado %}
+{% if filtros_activos %}
+<form class="card mb-6 grid gap-3 p-4 md:grid-cols-[1fr_1fr_1fr_auto]" method="get">
+  <label class="text-sm text-slate-400">Piso
+    <select class="input-dark mt-2" name="piso">
+      <option value="Todos" {% if not piso_seleccionado %}selected{% endif %}>Todos los pisos</option>
+      {% for opcion in range(1,6) %}<option value="{{ opcion }}" {% if piso_seleccionado|int == opcion %}selected{% endif %}>Piso {{ opcion }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="text-sm text-slate-400">Tipo
+    <select class="input-dark mt-2" name="tipo">{% for opcion in ['Todos','Normal','Doble','Familiar'] %}<option value="{{ opcion }}" {% if tipo == opcion %}selected{% endif %}>{{ opcion }}</option>{% endfor %}</select>
+  </label>
+  <label class="text-sm text-slate-400">Estado
+    <select class="input-dark mt-2" name="estado">{% for opcion in ['Todos','Disponible','Ocupado','Reserva','En limpieza','Mantenimiento'] %}<option value="{{ opcion }}" {% if estado == opcion %}selected{% endif %}>{{ opcion }}</option>{% endfor %}</select>
+  </label>
+  <button class="btn self-end bg-teal-500 text-slate-950" type="submit">Filtrar habitaciones</button>
+</form>
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+{% for h in habitaciones %}
+<article class="card p-5">
+  <div class="flex items-start justify-between"><div><p class="text-xs font-bold text-slate-500">HABITACIÓN</p><h2 class="text-2xl font-black">{{ h.id_habitacion }}</h2></div><span class="status {% if h.estado == 'Disponible' %}bg-teal-500/15 text-teal-300{% elif h.estado == 'Ocupado' %}bg-rose-500/15 text-rose-300{% elif h.estado == 'Reserva' %}bg-violet-500/15 text-violet-300{% else %}bg-amber-500/15 text-amber-300{% endif %}">{{ h.estado }}</span></div>
+  <div class="mt-4 grid grid-cols-2 gap-2 text-sm"><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tipo</p><p class="font-bold">{{ h.tipo }}</p></div><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tarifa</p><p class="font-bold">${{ '%.0f'|format(h.precio) }}</p></div></div>
+  {% if h.huesped_nombre %}<p class="mt-4 text-sm text-slate-400">Huésped: <strong class="text-slate-200">{{ h.huesped_nombre }}</strong></p>{% endif %}
+  <form class="mt-4 flex gap-2" method="post" action="{{ url_for('main.accion_habitacion', id_habitacion=h.id_habitacion, piso=piso) }}">
+    {% if h.estado == 'Disponible' %}<input class="input-dark" name="motivo" placeholder="Motivo de mantenimiento"><button class="btn bg-amber-500 text-slate-950" name="accion" value="mantenimiento">Mant.</button>{% elif h.estado == 'Mantenimiento' %}<button class="btn bg-teal-500 text-slate-950" name="accion" value="finalizar_mantenimiento">Finalizar</button>{% elif h.estado == 'En limpieza' %}<button class="btn bg-teal-500 text-slate-950" name="accion" value="finalizar_limpieza">Finalizar limpieza</button>{% endif %}
+  </form>
+</article>
+{% else %}<p class="col-span-full card p-5 text-slate-400">No hay habitaciones con esos filtros.</p>{% endfor %}
+</div>
+{% elif not piso_seleccionado %}
 <form class="card mb-6 grid gap-3 p-4 md:grid-cols-4" method="get">
   <label class="text-sm text-slate-400">Piso
     <select class="input-dark mt-2" name="piso">

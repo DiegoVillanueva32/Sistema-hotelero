@@ -66,9 +66,10 @@ def habitaciones():
         }
 
     piso_seleccionado = piso if piso.isdigit() and 1 <= int(piso) <= 5 else None
+    filtros_activos = tipo != "Todos" or estado != "Todos" or piso_seleccionado is not None
     habitaciones = (
         gestor.consultar_matriz_filtrada(piso, tipo, estado)
-        if piso_seleccionado
+        if filtros_activos
         else []
     )
     return render_template(
@@ -76,6 +77,7 @@ def habitaciones():
         habitaciones=habitaciones,
         pisos=pisos,
         piso_seleccionado=piso_seleccionado,
+        filtros_activos=filtros_activos,
         piso=piso,
         tipo=tipo,
         estado=estado,
