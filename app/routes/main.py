@@ -1,12 +1,55 @@
 import datetime
 import io
+import os
+import hmac
 
-from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, flash, redirect, render_template, request, session, url_for
 
 from app.persistence.persistencia import validar_password_admin
 from app.services.hotel_service import hotel_service
 
 bp = Blueprint("main", __name__)
+
+RECEPCION_PASSWORD = os.getenv("HOTEL_RECEPCION_PASSWORD", "recep_hotel99")
+
+
+@bp.before_app_request
+def exigir_inicio_sesion():
+    endpoint = request.endpoint or ""
+    if endpoint in {"main.login", "static"}:
+        return None
+    if session.get("recepcion_autorizado"):
+        return None
+    return redirect(url_for("main.login", next=request.path))
+
+
+@bp.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        recepcionista = request.form.get("recepcionista", "").strip()
+        password = request.form.get("password", "")
+        if not recepcionista:
+            flash("Ingresa el nombre del recepcionista.", "error")
+        elif not hmac.compare_digest(password, RECEPCION_PASSWORD):
+            flash("Contraseña incorrecta.", "error")
+        else:
+            session.clear()
+            session["recepcion_autorizado"] = True
+            session["recepcionista"] = recepcionista
+            session.permanent = False
+            destino = request.args.get("next")
+            if not destino or not destino.startswith("/") or destino.startswith("//"):
+                destino = url_for("main.dashboard")
+            return redirect(destino)
+
+    return render_template("login.html")
+
+
+@bp.route("/logout")
+def logout():
+    session.clear()
+    flash("Sesión cerrada correctamente.", "success")
+    return redirect(url_for("main.login"))
 
 
 def ejecutar_accion(accion, *args, **kwargs):
@@ -438,7 +481,10 @@ def turno():
     if request.method == "POST":
         accion = request.form.get("accion")
         if accion == "abrir":
-            ejecutar_accion(gestor.abrir_turno, request.form.get("recepcionista", ""))
+            recepcionista = request.form.get("recepcionista", "").strip()
+            if not recepcionista:
+                recepcionista = session.get("recepcionista", "")
+            ejecutar_accion(gestor.abrir_turno, recepcionista)
         elif accion == "cerrar":
             ejecutar_accion(gestor.cerrar_turno)
         return redirect(url_for("main.turno"))

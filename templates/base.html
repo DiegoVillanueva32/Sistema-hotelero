@@ -10,9 +10,18 @@
 <body class="h-full bg-slate-950 text-slate-100">
   <div class="min-h-full lg:grid lg:grid-cols-[260px_1fr]">
     <aside class="glass border-b border-slate-800 lg:border-b-0 lg:border-r lg:border-slate-800 lg:min-h-screen">
-      <div class="flex items-center justify-between px-6 py-5">
+      <div class="flex items-center justify-between gap-3 px-6 py-5">
         <a href="{{ url_for('main.dashboard') }}" class="text-xl font-black tracking-tight"><span class="text-teal-400">Hotel</span> Manager</a>
       </div>
+      {% if session.get('recepcion_autorizado') %}
+      <div class="mx-4 mb-3 flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900/60 px-3 py-2">
+        <div class="min-w-0">
+          <p class="text-[11px] font-bold uppercase text-slate-500">Recepcionista</p>
+          <p class="truncate text-sm font-bold text-slate-200">{{ session.get('recepcionista') }}</p>
+        </div>
+        <a href="{{ url_for('main.logout') }}" class="rounded-lg px-2 py-1 text-xs font-bold text-rose-300 hover:bg-rose-500/10">Salir</a>
+      </div>
+      {% endif %}
       <nav class="grid grid-cols-2 gap-2 px-4 pb-4 lg:grid-cols-1">
         {% set nav = [('dashboard','Panel'),('turno','Turno recepción'),('habitaciones','Habitaciones'),('buscar_huesped','Buscar'),('checkin','Check-in'),('checkout','Check-out'),('reservas','Reservas'),('calendario_reservas','Calendario'),('limpieza','Limpieza'),('mantenimiento','Mantenimiento'),('pagos','Pagos'),('clientes','Clientes'),('administracion','Administración'),('reportes','Reportes')] %}
         {% for endpoint, label in nav %}

@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ingreso recepcionista | Hotel Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
+</head>
+<body class="min-h-full bg-slate-950 text-slate-100">
+  <main class="grid min-h-screen place-items-center p-4">
+    <form class="card w-full max-w-md space-y-5 p-7" method="post">
+      <div>
+        <p class="text-sm font-bold text-teal-400">HOTEL MANAGER</p>
+        <h1 class="mt-2 text-3xl font-black">Inicio de sesión</h1>
+        <p class="mt-2 text-sm text-slate-400">Ingresa como recepcionista para continuar.</p>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="space-y-2">
+        {% for category, message in messages %}
+        <div class="rounded-xl border px-4 py-3 text-sm {% if category == 'success' %}border-teal-500/30 bg-teal-500/10 text-teal-200{% else %}border-rose-500/30 bg-rose-500/10 text-rose-200{% endif %}">{{ message }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      <label class="block text-sm text-slate-300">Nombre del recepcionista
+        <input class="input-dark mt-2" type="text" name="recepcionista" autocomplete="name" required autofocus>
+      </label>
+      <label class="block text-sm text-slate-300">Contraseña
+        <input class="input-dark mt-2" type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button class="btn w-full bg-teal-500 text-slate-950" type="submit">Ingresar al sistema</button>
+    </form>
+  </main>
+</body>
+</html>
