@@ -662,12 +662,14 @@ class GestorHotel:
         if not motivo_clean:
             return False, "Debe especificar un motivo."
         self.lista_negra[doc_clean] = motivo_clean
+        self._registrar_auditoria("Lista negra", detalle=f"Documento: {doc_clean}; motivo: {motivo_clean}")
         return True, f"Documento {doc_clean} marcado en LISTA NEGRA.\nMotivo: {motivo_clean}"
 
     def quitar_lista_negra(self, doc):
         doc_clean = doc.strip()
         if doc_clean in self.lista_negra:
             motivo = self.lista_negra.pop(doc_clean)
+            self._registrar_auditoria("Lista negra", detalle=f"Documento {doc_clean} removido; motivo anterior: {motivo}")
             return True, f"Documento {doc_clean} removido de lista negra.\n(Motivo anterior: {motivo})"
         return False, f"El documento {doc_clean} no está en la lista negra."
 
@@ -692,6 +694,7 @@ class GestorHotel:
         if visitas < 2:
             return False, "Un cliente frecuente debe tener al menos 2 visitas."
         self.clientes_frecuentes[doc_clean] = visitas
+        self._registrar_auditoria("Cliente frecuente", detalle=f"Documento: {doc_clean}; visitas: {visitas}")
         return True, f"Documento {doc_clean} marcado como CLIENTE FRECUENTE ({visitas} visitas)."
 
     # ============================================================

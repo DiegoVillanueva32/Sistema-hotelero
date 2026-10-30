@@ -5,6 +5,7 @@ Guarda y restaura TODO el estado del GestorHotel.
 """
 import configparser
 import datetime
+import hmac
 import os
 from pathlib import Path
 import re
@@ -29,6 +30,30 @@ def _configuracion_mysql():
         "database": os.getenv(
             "HOTEL_DB_NAME", seccion.get("database", "sistema_hotelero")),
     }
+
+
+def validar_password_admin(password_ingresada):
+    """Valida el acceso administrativo sin registrar ni mostrar la contraseña."""
+    if not isinstance(password_ingresada, str):
+        return False
+
+    config = configparser.ConfigParser(interpolation=None)
+    if CONFIG_PATH.exists():
+        config.read(CONFIG_PATH, encoding="utf-8")
+
+    password_admin = os.getenv("HOTEL_ADMIN_PASSWORD")
+    if not password_admin and config.has_section("admin"):
+        password_admin = config.get("admin", "password", fallback="")
+    if not password_admin:
+        password_admin = _configuracion_mysql()["password"]
+
+    if not password_admin:
+        return False
+
+    try:
+        return hmac.compare_digest(password_ingresada, password_admin)
+    except TypeError:
+        return False
 
 
 def _conectar(sin_base=False):

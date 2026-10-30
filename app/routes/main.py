@@ -2,6 +2,7 @@ import datetime
 
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 
+from app.persistence.persistencia import validar_password_admin
 from app.services.hotel_service import hotel_service
 
 bp = Blueprint("main", __name__)
@@ -75,19 +76,35 @@ def accion_habitacion(id_habitacion):
 @bp.route("/checkin", methods=["GET", "POST"])
 def checkin():
     gestor = hotel_service.gestor
+    ahora = datetime.datetime.now()
+    requiere_autorizacion = ahora.hour < 10
+
     if request.method == "POST":
-        hora = datetime.datetime.now().hour
+        autorizado = not requiere_autorizacion
+        if requiere_autorizacion:
+            password_ingresada = request.form.get("password_admin", "")
+            autorizado = validar_password_admin(password_ingresada)
+            if not autorizado:
+                flash("Contraseña administrativa incorrecta.", "error")
+                return redirect(url_for("main.checkin"))
+
         ejecutar_accion(
             gestor.procesar_checkin,
             request.form.get("habitacion", ""),
             request.form.get("nombre", "").strip(),
             request.form.get("documento", "").strip(),
-            hora,
-            request.form.get("administrador") == "1",
+            ahora.hour,
+            autorizado,
         )
         return redirect(url_for("main.checkin"))
+
     disponibles = [h for h in gestor.consultar_matriz().values() if h.estado in ("Disponible", "Reserva")]
-    return render_template("checkin.html", habitaciones=disponibles)
+    return render_template(
+        "checkin.html",
+        habitaciones=disponibles,
+        requiere_autorizacion=requiere_autorizacion,
+        hora_actual=ahora.strftime("%H:%M"),
+    )
 
 
 @bp.route("/checkout", methods=["GET", "POST"])
@@ -159,12 +176,73 @@ def limpieza():
 def pagos():
     gestor = hotel_service.gestor
     if request.method == "POST":
+        try:
+            monto = float(request.form.get("monto", "0") or 0)
+        except ValueError:
+            monto = 0
         ejecutar_accion(
             gestor.registrar_pago,
             request.form.get("habitacion", ""),
-            float(request.form.get("monto", "0") or 0),
+            monto,
             request.form.get("metodo", "Efectivo"),
         )
         return redirect(url_for("main.pagos"))
     ocupadas = [h for h in gestor.consultar_matriz().values() if h.estado == "Ocupado"]
     return render_template("pagos.html", habitaciones=ocupadas, pagos=gestor.obtener_pagos())
+
+
+@bp.route("/clientes", methods=["GET", "POST"])
+def clientes():
+    gestor = hotel_service.gestor
+    if request.method == "POST":
+        accion = request.form.get("accion")
+        documento = request.form.get("documento", "").strip()
+        if accion == "marcar_negra":
+            ejecutar_accion(gestor.marcar_lista_negra, documento, request.form.get("motivo", ""))
+        elif accion == "quitar_negra":
+            ejecutar_accion(gestor.quitar_lista_negra, documento)
+        elif accion == "marcar_frecuente":
+            try:
+                visitas = int(request.form.get("visitas", "2") or 2)
+            except ValueError:
+                visitas = 2
+            ejecutar_accion(gestor.marcar_cliente_frecuente, documento, visitas)
+        return redirect(url_for("main.clientes"))
+
+    return render_template(
+        "clientes.html",
+        lista_negra=gestor.obtener_lista_negra(),
+        frecuentes=gestor.obtener_clientes_frecuentes(),
+        descuento=gestor.descuento_cliente_frecuente,
+    )
+
+
+@bp.route("/reportes")
+def reportes():
+    gestor = hotel_service.gestor
+    fecha_inicio = request.args.get("fecha_inicio")
+    fecha_fin = request.args.get("fecha_fin")
+    ingresos = None
+    if fecha_inicio and fecha_fin:
+        try:
+            inicio = datetime.date.fromisoformat(fecha_inicio)
+            fin = datetime.date.fromisoformat(fecha_fin)
+            ingresos = gestor.reporte_ingresos(inicio, fin)
+            ingresos["total_ingresos"] = ingresos["total"]
+            ingresos["cantidad_pagos"] = len(ingresos["pagos"])
+        except ValueError:
+            flash("Las fechas del reporte no son válidas.", "error")
+
+    ocupacion = gestor.reporte_ocupacion_diaria()
+    ocupacion["disponibles"] = sum(
+        1 for h in gestor.consultar_matriz().values() if h.estado == "Disponible"
+    )
+    return render_template(
+        "reportes.html",
+        ocupacion=ocupacion,
+        ingresos=ingresos,
+        resumen=gestor.obtener_resumen_indicadores(),
+        auditoria=list(reversed(gestor.obtener_auditoria()))[:100],
+        fecha_inicio=fecha_inicio,
+        fecha_fin=fecha_fin,
+    )

@@ -4,3 +4,7 @@ port = 3306
 user = root
 password =
 database = sistema_hotelero
+
+[admin]
+# Si se deja vacío, el sistema usa la contraseña MySQL configurada arriba.
+password =
