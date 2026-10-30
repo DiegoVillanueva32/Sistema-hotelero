@@ -38,11 +38,20 @@ def login():
             session["recepcionista"] = recepcionista
             session.permanent = False
             destino = request.args.get("next")
-            if not destino or not destino.startswith("/") or destino.startswith("//"):
+            if (
+                not destino
+                or not destino.startswith("/")
+                or destino.startswith("//")
+                or destino == "/login"
+                or destino == "/run.py"
+            ):
                 destino = url_for("main.dashboard")
             return redirect(destino)
 
-    return render_template("login.html")
+    return render_template(
+        "login.html",
+        recepcion_password=RECEPCION_PASSWORD,
+    )
 
 
 @bp.route("/logout")
