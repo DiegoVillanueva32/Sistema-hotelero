@@ -1,5 +1,5 @@
 from flask import current_app
-from persistencia import guardar_estado
+from app.persistence.persistencia import guardar_estado
 
 
 class HotelService:

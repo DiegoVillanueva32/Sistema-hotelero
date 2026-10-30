@@ -1,5 +1,5 @@
 import datetime
-from habitacion import Habitacion
+from app.core.habitacion import Habitacion
 
 
 class GestorHotel:

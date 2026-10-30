@@ -2,8 +2,8 @@ import os
 
 from flask import Flask
 
-from persistencia import cargar_estado, guardar_estado, inicializar_bd
-from gestor_hotel import GestorHotel
+from app.persistence.persistencia import cargar_estado, guardar_estado, inicializar_bd
+from app.core.gestor_hotel import GestorHotel
 
 
 def create_app(config=None):

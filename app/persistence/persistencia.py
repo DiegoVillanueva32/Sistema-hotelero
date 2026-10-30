@@ -11,9 +11,9 @@ import re
 
 import mysql.connector
 
-from habitacion import Habitacion
+from app.core.habitacion import Habitacion
 
-CONFIG_PATH = Path(__file__).with_name("database.ini")
+CONFIG_PATH = Path(__file__).resolve().parents[2] / "database.ini"
 
 
 def _configuracion_mysql():
