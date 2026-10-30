@@ -400,7 +400,7 @@ def cargar_estado(gestor):
             c, "SELECT fecha,usuario,accion,id_habitacion,detalle "
             "FROM auditoria ORDER BY id"):
         gestor.auditoria.append({
-            "fecha": fecha.strftime("%Y-%m-%d %H:%M:%S") if fecha else "",
+            "fecha": fecha.strftime("%Y-%m-%d %H:%M") if fecha else "",
             "usuario": usuario,
             "accion": accion,
             "id_habitacion": id_habitacion,

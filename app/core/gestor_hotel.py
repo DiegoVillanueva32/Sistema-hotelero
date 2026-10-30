@@ -71,7 +71,7 @@ class GestorHotel:
 
     def _registrar_auditoria(self, accion, id_habitacion=None, detalle=""):
         self.auditoria.append({
-            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
             "usuario": self._usuario_actual(),
             "accion": accion,
             "id_habitacion": id_habitacion,
@@ -223,7 +223,7 @@ class GestorHotel:
         self._auditar_cambio_estado(hab, estado_anterior, "Check-out")
         self._registrar_auditoria(
             "Check-out", id_hab,
-            f"Huésped: {nombre_huesped}; documento: {documento_huesped}; hora: {datetime.datetime.now().strftime('%H:%M:%S')}; estado resultante: {estado_limpieza}"
+            f"Huésped: {nombre_huesped}; documento: {documento_huesped}; hora: {datetime.datetime.now().strftime('%H:%M')}; estado resultante: {estado_limpieza}"
         )
         self.fechas_salida.pop(id_hab, None)
 
@@ -741,7 +741,7 @@ class GestorHotel:
         self.turno_actual["checkouts_realizados"] = 0
         self.turno_actual["hora_cierre"] = None
         return True, (f"✅ Turno ABIERTO por {nombre} a las "
-                      f"{self.turno_actual['hora_apertura'].strftime('%H:%M:%S')}.")
+                      f"{self.turno_actual['hora_apertura'].strftime('%H:%M')}.")
 
     def cerrar_turno(self):
         if not self.turno_actual["abierto"]:
@@ -760,7 +760,7 @@ class GestorHotel:
         t = self.turno_actual
         if not t["abierto"]:
             return "⚠️ No hay un turno activo en este momento."
-        apertura = (t["hora_apertura"].strftime("%Y-%m-%d %H:%M:%S")
+        apertura = (t["hora_apertura"].strftime("%Y-%m-%d %H:%M")
                     if t["hora_apertura"] else "N/A")
         total = t["checkins_realizados"] + t["checkouts_realizados"]
         return (
@@ -962,7 +962,7 @@ class GestorHotel:
             "fecha_entrada": str(fecha_entrada),
             "fecha_salida": str(fecha_salida),
             "estado_final": estado_final,
-            "fecha_registro": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "fecha_registro": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
         })
 
     def obtener_historial_reservas(self, filtro_doc=None):
@@ -987,9 +987,9 @@ class GestorHotel:
                 resultado[h.empleado_limpieza].append({
                     "id": h.id_habitacion,
                     "estado": h.estado,
-                    "inicio": (h.hora_inicio_limpieza.strftime("%H:%M:%S")
+                    "inicio": (h.hora_inicio_limpieza.strftime("%H:%M")
                                if h.hora_inicio_limpieza else "—"),
-                    "fin": (h.hora_fin_limpieza.strftime("%H:%M:%S")
+                    "fin": (h.hora_fin_limpieza.strftime("%H:%M")
                             if h.hora_fin_limpieza else "—"),
                 })
         return resultado
@@ -1002,8 +1002,8 @@ class GestorHotel:
                 filas.append({
                     "id": h.id_habitacion,
                     "empleado": h.empleado_limpieza or "Sin asignar",
-                    "inicio": h.hora_inicio_limpieza.strftime("%Y-%m-%d %H:%M:%S"),
-                    "fin": (h.hora_fin_limpieza.strftime("%Y-%m-%d %H:%M:%S")
+                    "inicio": h.hora_inicio_limpieza.strftime("%Y-%m-%d %H:%M"),
+                    "fin": (h.hora_fin_limpieza.strftime("%Y-%m-%d %H:%M")
                             if h.hora_fin_limpieza else "En curso"),
                 })
         return filas
@@ -1034,7 +1034,7 @@ class GestorHotel:
             "descuento": descuento,
             "monto": total,
             "metodo": metodo,
-            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
         }
         self.pagos.append(pago)
         self._registrar_auditoria(
