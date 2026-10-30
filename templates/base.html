@@ -14,7 +14,7 @@
         <a href="{{ url_for('main.dashboard') }}" class="text-xl font-black tracking-tight"><span class="text-teal-400">Hotel</span> Manager</a>
       </div>
       <nav class="grid grid-cols-2 gap-2 px-4 pb-4 lg:grid-cols-1">
-        {% set nav = [('dashboard','Panel'),('turno','Turno recepción'),('habitaciones','Habitaciones'),('checkin','Check-in'),('checkout','Check-out'),('reservas','Reservas'),('limpieza','Limpieza'),('mantenimiento','Mantenimiento'),('pagos','Pagos'),('clientes','Clientes'),('reportes','Reportes')] %}
+        {% set nav = [('dashboard','Panel'),('turno','Turno recepción'),('habitaciones','Habitaciones'),('buscar_huesped','Buscar'),('checkin','Check-in'),('checkout','Check-out'),('reservas','Reservas'),('calendario_reservas','Calendario'),('limpieza','Limpieza'),('mantenimiento','Mantenimiento'),('pagos','Pagos'),('clientes','Clientes'),('administracion','Administración'),('reportes','Reportes')] %}
         {% for endpoint, label in nav %}
         <a href="{{ url_for('main.' ~ endpoint) }}" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white {% if request.endpoint == 'main.' ~ endpoint %}bg-teal-500/15 text-teal-300{% endif %}">{{ label }}</a>
         {% endfor %}

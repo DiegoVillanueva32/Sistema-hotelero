@@ -1,0 +1,7 @@
+{% extends 'base.html' %}
+{% block title %}Buscar huésped | Hotel Manager{% endblock %}
+{% block content %}
+<div class="mb-6"><p class="text-sm font-semibold text-teal-400">BÚSQUEDA</p><h1 class="mt-1 text-3xl font-black">Buscar huésped</h1></div>
+<form class="card mb-6 flex gap-3 p-4" method="get"><input class="input-dark flex-1" name="q" value="{{ criterio }}" placeholder="Nombre o documento" required><button class="btn bg-teal-500 text-slate-950">Buscar</button></form>
+<section class="card overflow-hidden"><table class="w-full text-left text-sm"><thead class="border-b border-slate-800 text-slate-400"><tr><th class="p-4">Habitación</th><th class="p-4">Huésped</th><th class="p-4">Documento</th><th class="p-4">Estado</th><th class="p-4">Acción</th></tr></thead><tbody>{% for id,nombre,doc,estado in resultados %}<tr class="border-b border-slate-800/60"><td class="p-4 font-bold">{{ id }}</td><td class="p-4">{{ nombre }}</td><td class="p-4">{{ doc }}</td><td class="p-4">{{ estado }}</td><td class="p-4"><a class="text-teal-300" href="{{ url_for('main.checkout', habitacion=id) if estado == 'Ocupado' else url_for('main.checkin', habitacion=id) }}">Abrir →</a></td></tr>{% else %}<tr><td class="p-4 text-slate-400" colspan="5">{% if criterio %}No se encontraron coincidencias.{% else %}Ingresa un nombre o documento para buscar.{% endif %}</td></tr>{% endfor %}</tbody></table></section>
+{% endblock %}

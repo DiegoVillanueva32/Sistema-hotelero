@@ -286,8 +286,20 @@ class GestorHotel:
             return False, "La fecha de salida debe ser POSTERIOR a la fecha de entrada."
 
         capacidad = {"Doble": 5, "Familiar": 5, "Normal": 40}
-        reservas_actuales = self._contar_reservas_por_tipo(hab.tipo)
-        if reservas_actuales >= capacidad[hab.tipo]:
+        reservas_actuales = sum(
+            1 for otra in self.habitaciones.values()
+            if otra.tipo == hab.tipo
+            and otra.id_habitacion != hab.id_habitacion
+            and otra.fecha_entrada
+            and otra.fecha_salida
+            and f_entrada < otra.fecha_salida
+            and f_salida > otra.fecha_entrada
+        )
+        ocupadas_mismo_tipo = sum(
+            1 for otra in self.habitaciones.values()
+            if otra.tipo == hab.tipo and otra.estado == "Ocupado"
+        ) if f_entrada <= hoy <= f_salida else 0
+        if reservas_actuales + ocupadas_mismo_tipo >= capacidad[hab.tipo]:
             return False, (f"No hay más cupos para tipo "
                            f"{hab.tipo} (límite: {capacidad[hab.tipo]}).")
 
@@ -648,15 +660,18 @@ class GestorHotel:
         if noches_extra <= 0:
             return False, "Las noches adicionales deben ser mayores a 0."
 
-        reservas_conflicto = [h.id_habitacion for h in self.habitaciones.values()
-                              if h.id_habitacion == id_hab and h.estado == "Reserva"]
-        if reservas_conflicto:
-            return False, ("Existen reservas posteriores en esta habitación. "
-                           "No se puede extender la estancia.")
-
         fecha_actual = self.fechas_salida.get(id_hab, datetime.datetime.now())
         nueva_fecha = fecha_actual + datetime.timedelta(days=noches_extra)
+        reserva_post_checkin = getattr(hab, "fecha_salida", None)
+        if reserva_post_checkin and reserva_post_checkin < nueva_fecha.date():
+            return False, ("La estancia no puede superar una reserva posterior "
+                           "existente para esta habitación.")
+
         self.fechas_salida[id_hab] = nueva_fecha
+        self._registrar_auditoria(
+            "Extensión de estancia", id_hab,
+            f"Noches adicionales: {noches_extra}; nueva salida: {nueva_fecha:%Y-%m-%d}"
+        )
 
         return True, (f"✅ Estancia extendida para {hab.huesped_nombre}.\n\n"
                       f"Habitación: {id_hab}\n"

@@ -1,0 +1,6 @@
+{% extends 'base.html' %}
+{% block title %}Calendario de reservas | Hotel Manager{% endblock %}
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4"><div><p class="text-sm font-semibold text-violet-400">RESERVAS</p><h1 class="mt-1 text-3xl font-black">Disponibilidad proyectada</h1></div><form class="flex gap-2" method="get">{% for opcion in [30,60,90] %}<button class="btn {% if dias == opcion %}bg-violet-500 text-white{% else %}bg-slate-800 text-slate-200{% endif %}" name="dias" value="{{ opcion }}">{{ opcion }} días</button>{% endfor %}</form></div>
+<section class="card overflow-hidden"><div class="overflow-x-auto"><table class="w-full text-left text-sm"><thead class="border-b border-slate-800 text-slate-400"><tr><th class="p-4">Fecha</th><th class="p-4">Normales disponibles</th><th class="p-4">Dobles disponibles</th><th class="p-4">Familiares disponibles</th></tr></thead><tbody>{% for fecha,tipos in proyeccion %}<tr class="border-b border-slate-800/60"><td class="p-4 font-bold">{{ fecha }}</td><td class="p-4 text-teal-300">{{ tipos.Normal }}</td><td class="p-4 text-violet-300">{{ tipos.Doble }}</td><td class="p-4 text-amber-300">{{ tipos.Familiar }}</td></tr>{% endfor %}</tbody></table></div></section>
+{% endblock %}

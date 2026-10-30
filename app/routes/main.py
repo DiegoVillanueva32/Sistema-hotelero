@@ -18,6 +18,8 @@ def ejecutar_accion(accion, *args, **kwargs):
             if ok:
                 hotel_service.persistir()
         else:
+            if resultado:
+                flash(str(resultado), "success")
             hotel_service.persistir()
         return True
     except Exception as exc:
@@ -81,6 +83,7 @@ def habitaciones():
         piso=piso,
         tipo=tipo,
         estado=estado,
+        motivos=gestor.motivos_mantenimiento,
     )
 
 
@@ -96,6 +99,8 @@ def accion_habitacion(id_habitacion):
         ejecutar_accion(gestor.asignar_limpieza, id_habitacion, request.form.get("empleado", "Empleado 1"))
     elif accion == "finalizar_limpieza":
         ejecutar_accion(gestor.finalizar_limpieza, id_habitacion)
+    elif accion == "reasignar":
+        ejecutar_accion(gestor.reasignar_habitacion, id_habitacion, request.form.get("destino", ""))
     return redirect(url_for(
         "main.habitaciones",
         piso=request.args.get("piso", "Todos"),
@@ -152,8 +157,17 @@ def checkin():
 def checkout():
     gestor = hotel_service.gestor
     if request.method == "POST":
-        ejecutar_accion(gestor.procesar_checkout, request.form.get("habitacion", ""))
-        return redirect(url_for("main.checkout"))
+        accion = request.form.get("accion", "checkout")
+        id_habitacion = request.form.get("habitacion", "")
+        if accion == "extender":
+            try:
+                noches = int(request.form.get("noches", "0"))
+            except ValueError:
+                noches = 0
+            ejecutar_accion(gestor.extender_estancia, id_habitacion, noches)
+        else:
+            ejecutar_accion(gestor.procesar_checkout, id_habitacion)
+        return redirect(url_for("main.checkout", habitacion=id_habitacion))
     ocupadas = [h for h in gestor.consultar_matriz().values() if h.estado == "Ocupado"]
     return render_template(
         "checkout.html",
@@ -182,9 +196,18 @@ def reservas():
             )
         elif accion == "cancelar":
             ejecutar_accion(gestor.cancelar_reserva, request.form.get("habitacion", ""))
+        elif accion == "cancelar":
+            ejecutar_accion(gestor.cancelar_reserva, request.form.get("habitacion", ""))
+        elif accion == "modificar":
+            ejecutar_accion(
+                gestor.modificar_fechas_reserva,
+                request.form.get("habitacion", ""),
+                request.form.get("fecha_entrada", ""),
+                request.form.get("fecha_salida", ""),
+            )
         elif accion == "noshow":
             ejecutar_accion(gestor.procesar_no_show)
-        return redirect(url_for("main.reservas"))
+        return redirect(url_for("main.reservas", habitacion=request.form.get("habitacion", "")))
 
     disponibles = [h for h in gestor.consultar_matriz().values() if h.estado in ("Disponible", "Reserva")]
     return render_template(
@@ -209,7 +232,7 @@ def limpieza():
             ejecutar_accion(gestor.finalizar_limpieza, id_habitacion)
         return redirect(url_for("main.limpieza"))
 
-    en_limpieza = [h for h in gestor.consultar_matriz().values() if h.estado == "En limpieza"]
+    en_limpieza = [h for h in gestor.consultar_matriz().values() if h.estado in ("En limpieza", "Pendiente")]
     return render_template(
         "limpieza.html",
         habitaciones=en_limpieza,
@@ -235,7 +258,68 @@ def mantenimiento():
     return render_template(
         "mantenimiento.html",
         habitaciones=habitaciones,
+        motivos=gestor.motivos_mantenimiento,
         habitacion_seleccionada=request.args.get("habitacion", ""),
+    )
+
+
+@bp.route("/reservas/calendario")
+def calendario_reservas():
+    gestor = hotel_service.gestor
+    dias = request.args.get("dias", "30")
+    try:
+        dias = int(dias)
+    except ValueError:
+        dias = 30
+    dias = dias if dias in (30, 60, 90) else 30
+    return render_template(
+        "calendario_reservas.html",
+        dias=dias,
+        proyeccion=gestor.proyectar_disponibilidad(dias),
+        historial=gestor.obtener_historial_reservas(),
+    )
+
+
+@bp.route("/reservas/<id_habitacion>/comprobante")
+def comprobante_reserva(id_habitacion):
+    gestor = hotel_service.gestor
+    ok, contenido = gestor.generar_comprobante_reserva(id_habitacion)
+    if not ok:
+        flash(contenido, "error")
+        return redirect(url_for("main.reservas"))
+    return Response(
+        contenido,
+        mimetype="text/plain",
+        headers={"Content-Disposition": f"attachment; filename=reserva-{id_habitacion}.txt"},
+    )
+
+
+@bp.route("/buscar", methods=["GET"])
+def buscar_huesped():
+    criterio = request.args.get("q", "").strip()
+    gestor = hotel_service.gestor
+    resultados = gestor.buscar_huesped(criterio) if criterio else []
+    return render_template("buscar.html", criterio=criterio, resultados=resultados)
+
+
+@bp.route("/administracion", methods=["GET", "POST"])
+def administracion():
+    gestor = hotel_service.gestor
+    if request.method == "POST":
+        accion = request.form.get("accion")
+        if accion == "tarifa":
+            ejecutar_accion(gestor.actualizar_tarifa, request.form.get("tipo", ""), request.form.get("precio", "0"))
+        elif accion == "descuento":
+            ejecutar_accion(gestor.configurar_descuento_frecuente, request.form.get("porcentaje", "10"))
+        return redirect(url_for("main.administracion"))
+
+    tarifas = {}
+    for habitacion in gestor.consultar_matriz().values():
+        tarifas.setdefault(habitacion.tipo, habitacion.precio)
+    return render_template(
+        "administracion.html",
+        tarifas=tarifas,
+        descuento=gestor.descuento_cliente_frecuente,
     )
 
 
@@ -255,7 +339,37 @@ def pagos():
         )
         return redirect(url_for("main.pagos"))
     ocupadas = [h for h in gestor.consultar_matriz().values() if h.estado == "Ocupado"]
-    return render_template("pagos.html", habitaciones=ocupadas, pagos=gestor.obtener_pagos())
+    habitacion_param = request.args.get("habitacion", "")
+    noches_param = request.args.get("noches", "1")
+    try:
+        noches_param = int(noches_param)
+    except ValueError:
+        noches_param = 1
+    calculo = None
+    if habitacion_param and noches_param > 0:
+        calculo = gestor.calcular_costo_estadia(habitacion_param, noches_param)
+    return render_template(
+        "pagos.html",
+        habitaciones=ocupadas,
+        pagos=gestor.obtener_pagos(),
+        habitacion_seleccionada=habitacion_param,
+        noches=noches_param,
+        calculo=calculo,
+    )
+
+
+@bp.route("/pagos/<id_habitacion>/comprobante")
+def comprobante_pago(id_habitacion):
+    gestor = hotel_service.gestor
+    ok, contenido = gestor.generar_comprobante_pago(id_habitacion)
+    if not ok:
+        flash(contenido, "error")
+        return redirect(url_for("main.pagos"))
+    return Response(
+        contenido,
+        mimetype="text/plain",
+        headers={"Content-Disposition": f"attachment; filename=pago-{id_habitacion}.txt"},
+    )
 
 
 @bp.route("/clientes", methods=["GET", "POST"])
