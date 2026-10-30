@@ -9,7 +9,10 @@
 {% if not piso_seleccionado %}
 <form class="card mb-6 grid gap-3 p-4 md:grid-cols-4" method="get">
   <label class="text-sm text-slate-400">Piso
-    <select class="input-dark mt-2" name="piso">{% for opcion in range(1,6) %}<option value="{{ opcion }}">Piso {{ opcion }}</option>{% endfor %}</select>
+    <select class="input-dark mt-2" name="piso">
+      <option value="Todos" selected>Todos los pisos</option>
+      {% for opcion in range(1,6) %}<option value="{{ opcion }}">Piso {{ opcion }}</option>{% endfor %}
+    </select>
   </label>
   <label class="text-sm text-slate-400">Tipo
     <select class="input-dark mt-2" name="tipo">{% for opcion in ['Todos','Normal','Doble','Familiar'] %}<option value="{{ opcion }}" {% if tipo == opcion %}selected{% endif %}>{{ opcion }}</option>{% endfor %}</select>
@@ -31,8 +34,11 @@
 {% else %}
 <form class="card mb-6 grid gap-3 p-4 md:grid-cols-[1fr_1fr_1fr_auto]" method="get">
   <label class="text-sm text-slate-400">Piso
-    <select class="input-dark mt-2" name="piso">    {% for opcion in range(1,6) %}<option value="{{ opcion }}" {% if piso_seleccionado|int == opcion %}selected{% endif %}>Piso {{ opcion }}</option>{% endfor %}
-</select>  </label>
+    <select class="input-dark mt-2" name="piso">
+      <option value="Todos">Todos los pisos</option>
+      {% for opcion in range(1,6) %}<option value="{{ opcion }}" {% if piso_seleccionado|int == opcion %}selected{% endif %}>Piso {{ opcion }}</option>{% endfor %}
+    </select>
+  </label>
   <label class="text-sm text-slate-400">Tipo
     <select class="input-dark mt-2" name="tipo">
       {% for opcion in ['Todos','Normal','Doble','Familiar'] %}<option value="{{ opcion }}" {% if tipo == opcion %}selected{% endif %}>{{ opcion }}</option>{% endfor %}
