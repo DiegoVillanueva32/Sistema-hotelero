@@ -4,7 +4,7 @@
 <div class="mx-auto max-w-2xl">
   <p class="text-sm font-semibold text-teal-400">INGRESO</p>
   <h1 class="mt-1 text-3xl font-black">Registrar check-in</h1>
-  <form class="card mt-6 space-y-4 p-6" method="post">
+  <form id="checkin-form" class="card mt-6 space-y-4 p-6" method="post">
     <label class="block text-sm text-slate-400">Habitación
       <select class="input-dark mt-2" name="habitacion" required>
         <option value="" disabled {% if not habitacion_seleccionada %}selected{% endif %}>Selecciona una habitación disponible</option>
@@ -21,25 +21,31 @@
     {% endif %}
 
     <label class="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/40 p-4 text-sm text-slate-300">
-      <input type="checkbox" name="administrador" value="1" id="autorizacion_admin" class="h-4 w-4 accent-teal-500">
+      <input type="checkbox" name="administrador" value="1" id="autorizacion_admin" class="h-4 w-4 accent-teal-500" {% if requiere_autorizacion %}checked{% endif %}>
       Registrar con autorización administrativa
     </label>
-    <input type="hidden" name="password_admin" id="password_admin">
+    <label id="password_admin_container" class="block text-sm text-slate-400 {% if not requiere_autorizacion %}hidden{% endif %}">Contraseña del administrador
+      <input class="input-dark mt-2" type="password" name="password_admin" id="password_admin" autocomplete="current-password" {% if requiere_autorizacion %}required{% endif %}>
+    </label>
 
     <button class="btn w-full bg-teal-500 text-slate-950" {% if not habitaciones %}disabled{% endif %}>Confirmar check-in</button>
   </form>
 </div>
 <script>
-  document.querySelector('.card form')?.addEventListener('submit', function (event) {
-    const checkbox = document.getElementById('autorizacion_admin');
-    if (!checkbox.checked) return;
+  const checkboxAdmin = document.getElementById('autorizacion_admin');
+  const passwordAdminContainer = document.getElementById('password_admin_container');
+  const passwordAdmin = document.getElementById('password_admin');
 
-    const password = window.prompt('Ingresa la contraseña del administrador:');
-    if (password === null || password === '') {
-      event.preventDefault();
-      return;
+  function actualizarCampoAdministrador() {
+    const requiere = checkboxAdmin.checked;
+    passwordAdminContainer.classList.toggle('hidden', !requiere);
+    passwordAdmin.required = requiere;
+    if (!requiere) {
+      passwordAdmin.value = '';
     }
-    document.getElementById('password_admin').value = password;
-  });
+  }
+
+  checkboxAdmin.addEventListener('change', actualizarCampoAdministrador);
+  actualizarCampoAdministrador();
 </script>
 {% endblock %}
