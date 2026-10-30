@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, flash
+from flask import Flask
 
 from persistencia import cargar_estado, guardar_estado, inicializar_bd
 from gestor_hotel import GestorHotel

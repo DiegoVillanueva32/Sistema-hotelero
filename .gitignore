@@ -1,6 +1,9 @@
 database.ini
+.env
+.env.*
 __pycache__/
 *.py[cod]
-instance/
 .pytest_cache/
-.env
+.vscode/
+instance/
+*.pyc
