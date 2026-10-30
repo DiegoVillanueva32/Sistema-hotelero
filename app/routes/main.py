@@ -192,7 +192,7 @@ def checkin():
         habitaciones=disponibles,
         habitacion_seleccionada=request.args.get("habitacion", ""),
         requiere_autorizacion=requiere_autorizacion,
-        hora_actual=ahora.strftime("%H:%M"),
+        hora_actual=f"{ahora.hour % 12 or 12}:{ahora.minute:02d} {'a.m.' if ahora.hour < 12 else 'p.m.'}",
     )
 
 

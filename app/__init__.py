@@ -1,4 +1,5 @@
 import os
+import datetime
 
 from flask import Flask
 
@@ -35,6 +36,23 @@ def create_app(config=None):
 
     from app.routes.main import bp
     app.register_blueprint(bp)
+
+    def hora_espanola(valor):
+        if not valor:
+            return "—"
+        if isinstance(valor, str):
+            try:
+                valor = datetime.datetime.fromisoformat(valor)
+            except ValueError:
+                try:
+                    valor = datetime.datetime.strptime(valor, "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    return valor
+        hora = valor.hour % 12 or 12
+        periodo = "a.m." if valor.hour < 12 else "p.m."
+        return f"{hora}:{valor.minute:02d} {periodo}"
+
+    app.jinja_env.filters["hora_espanola"] = hora_espanola
 
     @app.context_processor
     def shared_context():
