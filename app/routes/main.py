@@ -49,10 +49,33 @@ def habitaciones():
     piso = request.args.get("piso", "Todos")
     tipo = request.args.get("tipo", "Todos")
     estado = request.args.get("estado", "Todos")
-    habitaciones = gestor.consultar_matriz_filtrada(piso, tipo, estado)
+
+    pisos = {}
+    for numero_piso in range(1, 6):
+        habitaciones_piso = [
+            h for h in gestor.consultar_matriz().values()
+            if str(h.piso) == str(numero_piso)
+        ]
+        pisos[numero_piso] = {
+            "total": len(habitaciones_piso),
+            "disponibles": sum(1 for h in habitaciones_piso if h.estado == "Disponible"),
+            "ocupadas": sum(1 for h in habitaciones_piso if h.estado == "Ocupado"),
+            "reservas": sum(1 for h in habitaciones_piso if h.estado == "Reserva"),
+            "limpieza": sum(1 for h in habitaciones_piso if h.estado == "En limpieza"),
+            "mantenimiento": sum(1 for h in habitaciones_piso if h.estado == "Mantenimiento"),
+        }
+
+    piso_seleccionado = piso if piso.isdigit() and 1 <= int(piso) <= 5 else None
+    habitaciones = (
+        gestor.consultar_matriz_filtrada(piso, tipo, estado)
+        if piso_seleccionado
+        else []
+    )
     return render_template(
         "habitaciones.html",
         habitaciones=habitaciones,
+        pisos=pisos,
+        piso_seleccionado=piso_seleccionado,
         piso=piso,
         tipo=tipo,
         estado=estado,
@@ -71,7 +94,12 @@ def accion_habitacion(id_habitacion):
         ejecutar_accion(gestor.asignar_limpieza, id_habitacion, request.form.get("empleado", "Empleado 1"))
     elif accion == "finalizar_limpieza":
         ejecutar_accion(gestor.finalizar_limpieza, id_habitacion)
-    return redirect(url_for("main.habitaciones", piso=request.args.get("piso", "Todos")))
+    return redirect(url_for(
+        "main.habitaciones",
+        piso=request.args.get("piso", "Todos"),
+        tipo=request.args.get("tipo", "Todos"),
+        estado=request.args.get("estado", "Todos"),
+    ))
 
 
 @bp.route("/checkin", methods=["GET", "POST"])

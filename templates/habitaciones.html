@@ -1,9 +1,24 @@
 {% extends 'base.html' %}
 {% block title %}Habitaciones | Hotel Manager{% endblock %}
 {% block content %}
-<div class="mb-6"><p class="text-sm font-semibold text-teal-400">INVENTARIO</p><h1 class="mt-1 text-3xl font-black">Habitaciones</h1></div>
-<form class="card mb-6 grid gap-3 p-4 md:grid-cols-4" method="get">
-  <input class="input-dark" name="piso" value="{{ piso }}" placeholder="Piso (Todos o 1-5)">
+<div class="mb-6 flex items-end justify-between gap-4">
+  <div><p class="text-sm font-semibold text-teal-400">INVENTARIO</p><h1 class="mt-1 text-3xl font-black">{% if piso_seleccionado %}Piso {{ piso_seleccionado }}{% else %}Pisos del hotel{% endif %}</h1></div>
+  {% if piso_seleccionado %}<a class="btn bg-slate-800 text-slate-200" href="{{ url_for('main.habitaciones') }}">← Ver los 5 pisos</a>{% endif %}
+</div>
+
+{% if not piso_seleccionado %}
+<div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+{% for numero_piso, resumen in pisos.items() %}
+<a href="{{ url_for('main.habitaciones', piso=numero_piso) }}" class="card block p-6 transition hover:-translate-y-1 hover:border-teal-400/40">
+  <div class="flex items-start justify-between"><div><p class="text-xs font-bold text-slate-500">HOTEL</p><h2 class="mt-1 text-4xl font-black">Piso {{ numero_piso }}</h2></div><span class="rounded-full bg-teal-500/15 px-3 py-1 text-sm font-bold text-teal-300">{{ resumen.total }} habitaciones</span></div>
+  <div class="mt-5 grid grid-cols-2 gap-3 text-sm"><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Disponibles</p><strong class="text-teal-300">{{ resumen.disponibles }}</strong></div><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Ocupadas</p><strong class="text-rose-300">{{ resumen.ocupadas }}</strong></div><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Reservadas</p><strong class="text-violet-300">{{ resumen.reservas }}</strong></div><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Limpieza / Mant.</p><strong class="text-amber-300">{{ resumen.limpieza + resumen.mantenimiento }}</strong></div></div>
+  <p class="mt-5 text-sm font-bold text-teal-300">Habitaciones {{ numero_piso }}01–{{ numero_piso }}10 →</p>
+</a>
+{% endfor %}
+</div>
+{% else %}
+<form class="card mb-6 grid gap-3 p-4 md:grid-cols-[1fr_1fr_1fr_auto]" method="get">
+  <input type="hidden" name="piso" value="{{ piso_seleccionado }}">
   <input class="input-dark" name="tipo" value="{{ tipo }}" placeholder="Tipo (Todos)">
   <input class="input-dark" name="estado" value="{{ estado }}" placeholder="Estado (Todos)">
   <button class="btn bg-teal-500 text-slate-950" type="submit">Filtrar</button>
@@ -14,10 +29,11 @@
   <div class="flex items-start justify-between"><div><p class="text-xs font-bold text-slate-500">HABITACIÓN</p><h2 class="text-2xl font-black">{{ h.id_habitacion }}</h2></div><span class="status {% if h.estado == 'Disponible' %}bg-teal-500/15 text-teal-300{% elif h.estado == 'Ocupado' %}bg-rose-500/15 text-rose-300{% elif h.estado == 'Reserva' %}bg-violet-500/15 text-violet-300{% else %}bg-amber-500/15 text-amber-300{% endif %}">{{ h.estado }}</span></div>
   <div class="mt-4 grid grid-cols-2 gap-2 text-sm"><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tipo</p><p class="font-bold">{{ h.tipo }}</p></div><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tarifa</p><p class="font-bold">${{ '%.0f'|format(h.precio) }}</p></div></div>
   {% if h.huesped_nombre %}<p class="mt-4 text-sm text-slate-400">Huésped: <strong class="text-slate-200">{{ h.huesped_nombre }}</strong></p>{% endif %}
-  <form class="mt-4 flex gap-2" method="post" action="{{ url_for('main.accion_habitacion', id_habitacion=h.id_habitacion) }}">
+  <form class="mt-4 flex gap-2" method="post" action="{{ url_for('main.accion_habitacion', id_habitacion=h.id_habitacion, piso=piso_seleccionado) }}">
     {% if h.estado == 'Disponible' %}<input class="input-dark" name="motivo" placeholder="Motivo de mantenimiento"><button class="btn bg-amber-500 text-slate-950" name="accion" value="mantenimiento">Mant.</button>{% elif h.estado == 'Mantenimiento' %}<button class="btn bg-teal-500 text-slate-950" name="accion" value="finalizar_mantenimiento">Finalizar</button>{% elif h.estado == 'En limpieza' %}<button class="btn bg-teal-500 text-slate-950" name="accion" value="finalizar_limpieza">Finalizar limpieza</button>{% endif %}
   </form>
 </article>
 {% else %}<p class="col-span-full text-slate-400">No hay habitaciones con esos filtros.</p>{% endfor %}
 </div>
+{% endif %}
 {% endblock %}
