@@ -80,8 +80,14 @@ def checkin():
     requiere_autorizacion = ahora.hour < 10
 
     if request.method == "POST":
+        autorizacion_administrativa = request.form.get("administrador") == "1"
+
+        if requiere_autorizacion and not autorizacion_administrativa:
+            flash("Antes de las 10:00 debe marcar la autorización administrativa e ingresar la contraseña del administrador.", "error")
+            return redirect(url_for("main.checkin"))
+
         autorizado = not requiere_autorizacion
-        if requiere_autorizacion:
+        if autorizacion_administrativa:
             password_ingresada = request.form.get("password_admin", "")
             autorizado = validar_password_admin(password_ingresada)
             if not autorizado:

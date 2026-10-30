@@ -15,13 +15,31 @@
     <label class="block text-sm text-slate-400">Nombre completo<input class="input-dark mt-2" name="nombre" autocomplete="name" required></label>
     <label class="block text-sm text-slate-400">Documento<input class="input-dark mt-2" name="documento" autocomplete="off" required></label>
     {% if requiere_autorizacion %}
-    <label class="block rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">Contraseña administrativa (check-in antes de las 10:00)
-      <input class="input-dark mt-2" name="password_admin" type="password" autocomplete="current-password" required>
-    </label>
+    <p class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">Hora actual {{ hora_actual }}: antes de las 10:00 se requiere autorización administrativa.</p>
     {% else %}
     <p class="rounded-xl border border-teal-500/30 bg-teal-500/10 p-3 text-sm text-teal-200">Hora actual {{ hora_actual }}: check-in autorizado sin contraseña.</p>
     {% endif %}
+
+    <label class="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/40 p-4 text-sm text-slate-300">
+      <input type="checkbox" name="administrador" value="1" id="autorizacion_admin" class="h-4 w-4 accent-teal-500">
+      Registrar con autorización administrativa
+    </label>
+    <input type="hidden" name="password_admin" id="password_admin">
+
     <button class="btn w-full bg-teal-500 text-slate-950" {% if not habitaciones %}disabled{% endif %}>Confirmar check-in</button>
   </form>
 </div>
+<script>
+  document.querySelector('.card form')?.addEventListener('submit', function (event) {
+    const checkbox = document.getElementById('autorizacion_admin');
+    if (!checkbox.checked) return;
+
+    const password = window.prompt('Ingresa la contraseña del administrador:');
+    if (password === null || password === '') {
+      event.preventDefault();
+      return;
+    }
+    document.getElementById('password_admin').value = password;
+  });
+</script>
 {% endblock %}
