@@ -48,10 +48,7 @@ def login():
                 destino = url_for("main.dashboard")
             return redirect(destino)
 
-    return render_template(
-        "login.html",
-        recepcion_password=RECEPCION_PASSWORD,
-    )
+    return render_template("login.html")
 
 
 @bp.route("/logout")
