@@ -1,4 +1,3 @@
-import datetime
 import io
 import os
 import hmac
@@ -7,6 +6,7 @@ from flask import Blueprint, Response, flash, redirect, render_template, request
 
 from app.persistence.persistencia import validar_password_admin
 from app.services.hotel_service import hotel_service
+from app.timezone import hora_local
 
 bp = Blueprint("main", __name__)
 
@@ -161,7 +161,7 @@ def accion_habitacion(id_habitacion):
 @bp.route("/checkin", methods=["GET", "POST"])
 def checkin():
     gestor = hotel_service.gestor
-    ahora = datetime.datetime.now()
+    ahora = hora_local()
     requiere_autorizacion = ahora.hour < 8 or ahora.hour >= 10
 
     if request.method == "POST":

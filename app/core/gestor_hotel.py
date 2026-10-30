@@ -1,5 +1,6 @@
 import datetime
 from app.core.habitacion import Habitacion
+from app.timezone import fecha_local, hora_local
 
 
 class GestorHotel:
@@ -71,7 +72,7 @@ class GestorHotel:
 
     def _registrar_auditoria(self, accion, id_habitacion=None, detalle=""):
         self.auditoria.append({
-            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "fecha": hora_local().strftime("%Y-%m-%d %H:%M"),
             "usuario": self._usuario_actual(),
             "accion": accion,
             "id_habitacion": id_habitacion,
@@ -93,7 +94,7 @@ class GestorHotel:
         return self.filtro_general(piso or "Todos", tipo or "Todos", estado or "Todos")
 
     def _tiene_reserva_pendiente(self, habitacion, hoy=None):
-        hoy = hoy or datetime.date.today()
+        hoy = hoy or fecha_local()
         return (
             habitacion.estado in ("Reserva", "Disponible")
             and habitacion.fecha_entrada
@@ -113,7 +114,7 @@ class GestorHotel:
 
     def actualizar_estados_reservas(self, hoy=None):
         """Refleja si una reserva corresponde a hoy sin perder sus fechas futuras."""
-        hoy = hoy or datetime.date.today()
+        hoy = hoy or fecha_local()
         for habitacion in self.habitaciones.values():
             if not self._tiene_reserva_pendiente(habitacion, hoy):
                 continue
@@ -160,7 +161,7 @@ class GestorHotel:
         if not hab:
             return False, "Habitación no encontrada o ID inválido."
 
-        hoy = datetime.date.today()
+        hoy = fecha_local()
         self.actualizar_estados_reservas(hoy)
         if self._tiene_reserva_pendiente(hab, hoy) and not self._reserva_cubre_fecha(hab, hoy):
             return False, f"La habitación tiene una reserva desde {hab.fecha_entrada}."
@@ -187,7 +188,7 @@ class GestorHotel:
             "Check-in", id_hab,
             f"Huésped: {nombre}; documento: {doc}; visitas: {visitas_actuales}; autorización administrativa: {autorizacion}"
         )
-        self.fechas_salida[id_hab] = datetime.datetime.now() + datetime.timedelta(days=1)
+        self.fechas_salida[id_hab] = hora_local() + datetime.timedelta(days=1)
 
         if self.turno_actual["abierto"]:
             self.turno_actual["checkins_realizados"] += 1
@@ -212,7 +213,7 @@ class GestorHotel:
         self._registrar_historial(
             hab, estado_final="Check-out",
             fecha_entrada=str(hab.fecha_entrada) if hab.fecha_entrada else "—",
-            fecha_salida=str(datetime.date.today())
+            fecha_salida=str(fecha_local())
         )
 
         estado_limpieza = (
@@ -223,7 +224,7 @@ class GestorHotel:
         self._auditar_cambio_estado(hab, estado_anterior, "Check-out")
         self._registrar_auditoria(
             "Check-out", id_hab,
-            f"Huésped: {nombre_huesped}; documento: {documento_huesped}; hora: {datetime.datetime.now().strftime('%H:%M')}; estado resultante: {estado_limpieza}"
+            f"Huésped: {nombre_huesped}; documento: {documento_huesped}; hora: {hora_local().strftime('%H:%M')}; estado resultante: {estado_limpieza}"
         )
         self.fechas_salida.pop(id_hab, None)
 
@@ -255,7 +256,7 @@ class GestorHotel:
     # RF-21 / RF-22: Reservas
     # ============================================================
     def _contar_reservas_por_tipo(self, tipo):
-        hoy = datetime.date.today()
+        hoy = fecha_local()
         return sum(1 for h in self.habitaciones.values()
                    if h.tipo == tipo and self._tiene_reserva_pendiente(h, hoy))
 
@@ -279,7 +280,7 @@ class GestorHotel:
         except ValueError:
             return False, "Formato de fecha inválido. Use AAAA-MM-DD (ej: 2026-04-15)."
 
-        hoy = datetime.date.today()
+        hoy = fecha_local()
         if f_entrada < hoy:
             return False, f"La fecha de entrada ({f_entrada}) no puede ser anterior a hoy ({hoy})."
         if f_salida <= f_entrada:
@@ -318,7 +319,7 @@ class GestorHotel:
     # ============================================================
     def procesar_no_show(self):
         liberadas = []
-        hoy = datetime.date.today()
+        hoy = fecha_local()
         self.actualizar_estados_reservas(hoy)
         for hab in self.habitaciones.values():
             if (hab.estado == "Reserva" and hab.fecha_entrada
@@ -356,7 +357,7 @@ class GestorHotel:
         hab = self.obtener_habitacion(id_hab)
         if not hab or not self._tiene_reserva_pendiente(hab):
             return False, "La habitación no tiene una reserva activa."
-        ahora = ahora or datetime.datetime.now()
+        ahora = ahora or hora_local()
         limite = datetime.datetime.combine(hab.fecha_entrada, datetime.time(18, 0))
         if ahora > limite:
             return False, ("La reserva solo puede cancelarse antes de la hora límite "
@@ -376,7 +377,7 @@ class GestorHotel:
     # RF-31 a RF-40: Limpieza
     # ============================================================
     def _contar_asignaciones_limpieza_hoy(self, empleado=None):
-        hoy = datetime.date.today()
+        hoy = fecha_local()
         return sum(
             1 for hab in self.habitaciones.values()
             if hab.empleado_limpieza
@@ -411,7 +412,7 @@ class GestorHotel:
         estado_anterior = hab.estado
         hab.estado = "En limpieza"
         hab.empleado_limpieza = empleado
-        hab.hora_inicio_limpieza = datetime.datetime.now()
+        hab.hora_inicio_limpieza = hora_local()
         hab.hora_fin_limpieza = None
         self.empleados_limpieza[empleado] = self._contar_limpieza_empleado(empleado)
         self._auditar_cambio_estado(hab, estado_anterior, f"Asignada a {empleado}")
@@ -421,7 +422,7 @@ class GestorHotel:
         for hab in self.habitaciones.values():
             if hab.estado == "En limpieza" and hab.empleado_limpieza:
                 estado_anterior = hab.estado
-                hab.hora_fin_limpieza = datetime.datetime.now()
+                hab.hora_fin_limpieza = hora_local()
                 hab.estado = "Disponible"
                 self._auditar_cambio_estado(
                     hab, estado_anterior, "Limpieza finalizada por auto-limpieza")
@@ -450,7 +451,7 @@ class GestorHotel:
             empleado = min(disponibles, key=self.empleados_limpieza.get)
             hab.empleado_limpieza = empleado
             self.empleados_limpieza[empleado] += 1
-            hab.hora_inicio_limpieza = datetime.datetime.now()
+            hab.hora_inicio_limpieza = hora_local()
             hab.hora_fin_limpieza = None
             estado_anterior = hab.estado
             hab.estado = "En limpieza"
@@ -467,9 +468,9 @@ class GestorHotel:
             return False, f"La habitación {id_habitacion} no está en proceso de limpieza."
         # 🔥 RF-38
         if not hab.hora_inicio_limpieza:
-            hab.hora_inicio_limpieza = datetime.datetime.now()
+            hab.hora_inicio_limpieza = hora_local()
         estado_anterior = hab.estado
-        hab.hora_fin_limpieza = datetime.datetime.now()
+        hab.hora_fin_limpieza = hora_local()
         hab.estado = "Disponible"
         self._auditar_cambio_estado(hab, estado_anterior, "Limpieza finalizada")
         return True, f"La habitación {id_habitacion} ha finalizado su limpieza y ahora está DISPONIBLE."
@@ -563,7 +564,7 @@ class GestorHotel:
         return round(monto * self.descuento_cliente_frecuente / 100, 2)
 
     def reporte_ocupacion_diaria(self, fecha=None):
-        fecha = fecha or datetime.date.today()
+        fecha = fecha or fecha_local()
         if isinstance(fecha, str):
             try:
                 fecha = datetime.date.fromisoformat(fecha)
@@ -660,7 +661,7 @@ class GestorHotel:
         if noches_extra <= 0:
             return False, "Las noches adicionales deben ser mayores a 0."
 
-        fecha_actual = self.fechas_salida.get(id_hab, datetime.datetime.now())
+        fecha_actual = self.fechas_salida.get(id_hab, hora_local())
         nueva_fecha = fecha_actual + datetime.timedelta(days=noches_extra)
         reserva_post_checkin = getattr(hab, "fecha_salida", None)
         if reserva_post_checkin and reserva_post_checkin < nueva_fecha.date():
@@ -736,7 +737,7 @@ class GestorHotel:
             return False, "Debe ingresar el nombre del recepcionista."
         self.turno_actual["abierto"] = True
         self.turno_actual["recepcionista"] = nombre
-        self.turno_actual["hora_apertura"] = datetime.datetime.now()
+        self.turno_actual["hora_apertura"] = hora_local()
         self.turno_actual["checkins_realizados"] = 0
         self.turno_actual["checkouts_realizados"] = 0
         self.turno_actual["hora_cierre"] = None
@@ -747,7 +748,7 @@ class GestorHotel:
         if not self.turno_actual["abierto"]:
             return False, "No hay un turno abierto para cerrar."
         arqueo = self.generar_arqueo()
-        self.turno_actual["hora_cierre"] = datetime.datetime.now()
+        self.turno_actual["hora_cierre"] = hora_local()
         self.turno_actual["historial_turnos"].append(dict(self.turno_actual))
         nombre = self.turno_actual["recepcionista"]
         self.turno_actual["abierto"] = False
@@ -810,7 +811,7 @@ class GestorHotel:
         self._registrar_auditoria(
             "Check-in presencial No-Show", id_hab,
             f"Huésped: {nombre}; documento: {doc}")
-        self.fechas_salida[id_hab] = datetime.datetime.now() + datetime.timedelta(days=1)
+        self.fechas_salida[id_hab] = hora_local() + datetime.timedelta(days=1)
 
         if self.turno_actual["abierto"]:
             self.turno_actual["checkins_realizados"] += 1
@@ -834,7 +835,7 @@ class GestorHotel:
         if not self._tiene_reserva_pendiente(hab):
             return False, f"La habitación no tiene reserva activa (Estado: {hab.estado})."
 
-        ahora = datetime.datetime.now()
+        ahora = hora_local()
 
         if hab.fecha_entrada and hab.fecha_salida:
             f_entrada_str = hab.fecha_entrada.strftime("%Y-%m-%d")
@@ -891,7 +892,7 @@ class GestorHotel:
         Devuelve una lista de tuplas (fecha, {tipo: disponibles}) para los
         próximos `dias` días, calculando las reservas activas.
         """
-        hoy = datetime.date.today()
+        hoy = fecha_local()
         totales = {"Doble": 5, "Familiar": 5, "Normal": 40}
         proyeccion = []
         for i in range(dias):
@@ -932,7 +933,7 @@ class GestorHotel:
         except ValueError:
             return False, "Formato de fecha inválido. Use AAAA-MM-DD."
 
-        hoy = datetime.date.today()
+        hoy = fecha_local()
         if f_entrada < hoy:
             return False, "La nueva fecha de entrada no puede ser anterior a hoy."
         if f_salida <= f_entrada:
@@ -962,7 +963,7 @@ class GestorHotel:
             "fecha_entrada": str(fecha_entrada),
             "fecha_salida": str(fecha_salida),
             "estado_final": estado_final,
-            "fecha_registro": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "fecha_registro": hora_local().strftime("%Y-%m-%d %H:%M"),
         })
 
     def obtener_historial_reservas(self, filtro_doc=None):
@@ -1034,7 +1035,7 @@ class GestorHotel:
             "descuento": descuento,
             "monto": total,
             "metodo": metodo,
-            "fecha": datetime.datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "fecha": hora_local().strftime("%Y-%m-%d %H:%M"),
         }
         self.pagos.append(pago)
         self._registrar_auditoria(
