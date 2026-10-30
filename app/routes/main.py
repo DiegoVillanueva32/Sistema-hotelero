@@ -225,20 +225,14 @@ def reservas():
     if request.method == "POST":
         accion = request.form.get("accion")
         if accion == "crear":
-            entrada = request.form.get("fecha_entrada") or None
-            salida = request.form.get("fecha_salida") or None
-            fecha_entrada = datetime.date.fromisoformat(entrada) if entrada else None
-            fecha_salida = datetime.date.fromisoformat(salida) if salida else None
             ejecutar_accion(
                 gestor.crear_reserva,
                 request.form.get("habitacion", ""),
                 request.form.get("nombre", "").strip(),
                 request.form.get("documento", "").strip(),
-                fecha_entrada,
-                fecha_salida,
+                request.form.get("fecha_entrada", "").strip(),
+                request.form.get("fecha_salida", "").strip(),
             )
-        elif accion == "cancelar":
-            ejecutar_accion(gestor.cancelar_reserva, request.form.get("habitacion", ""))
         elif accion == "cancelar":
             ejecutar_accion(gestor.cancelar_reserva, request.form.get("habitacion", ""))
         elif accion == "modificar":
