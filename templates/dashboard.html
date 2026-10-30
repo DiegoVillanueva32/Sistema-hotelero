@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+{% block title %}Panel | Hotel Manager{% endblock %}
+{% block content %}
+<div class="mb-8 flex items-end justify-between"><div><p class="text-sm font-semibold text-teal-400">OPERACIÓN HOTELERA</p><h1 class="mt-1 text-3xl font-black">Panel principal</h1></div></div>
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <section class="card p-5"><p class="text-sm text-slate-400">Habitaciones</p><p class="mt-2 text-4xl font-black">{{ total }}</p></section>
+  <section class="card p-5"><p class="text-sm text-slate-400">Ocupadas</p><p class="mt-2 text-4xl font-black text-rose-400">{{ ocupadas }}</p></section>
+  <section class="card p-5"><p class="text-sm text-slate-400">Reservas registradas</p><p class="mt-2 text-4xl font-black text-violet-400">{{ reservas }}</p></section>
+  <section class="card p-5"><p class="text-sm text-slate-400">Pagos acumulados</p><p class="mt-2 text-2xl font-black text-teal-400">${{ '%.2f'|format(pagos) }}</p></section>
+</div>
+<div class="mt-6 grid gap-6 lg:grid-cols-2">
+  <section class="card p-6"><h2 class="mb-5 text-lg font-bold">Estado de habitaciones</h2><div class="space-y-3">{% for estado, cantidad in estados.items() %}<div class="flex items-center justify-between rounded-xl bg-slate-950/40 px-4 py-3"><span>{{ estado }}</span><strong>{{ cantidad }}</strong></div>{% else %}<p class="text-slate-400">Sin datos.</p>{% endfor %}</div></section>
+  <section class="card p-6"><h2 class="mb-5 text-lg font-bold">Notificaciones</h2><div class="space-y-3">{% for notification in notifications %}<div class="rounded-xl border border-slate-700/50 px-4 py-3 text-sm text-slate-300">{{ notification }}</div>{% else %}<p class="text-slate-400">No hay novedades.</p>{% endfor %}</div></section>
+</div>
+{% endblock %}

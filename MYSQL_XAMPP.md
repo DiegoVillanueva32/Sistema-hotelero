@@ -1,36 +1,41 @@
-# MySQL con XAMPP
+# Base de datos MySQL
 
-La aplicación se conecta al MySQL/MariaDB local de XAMPP. phpMyAdmin es la interfaz para administrar esa base; no es un servicio de Google.
+El sistema puede usar MySQL local instalado con XAMPP o MySQL Workbench.
 
 ## Preparación
 
-1. Abre XAMPP Control Panel e inicia **MySQL**. Inicia también **Apache** para abrir phpMyAdmin.
-2. Abre `http://localhost/phpmyadmin` y confirma que phpMyAdmin carga.
-3. En la carpeta del proyecto, crea la configuración local desde PowerShell:
+1. Inicia el servicio MySQL desde XAMPP o MySQL Workbench.
+2. Confirma el puerto, normalmente `3306`.
+3. En la carpeta del proyecto, crea la configuración local:
 
    ```powershell
    Copy-Item database.ini.example database.ini
    ```
 
-4. Si cambiaste la contraseña de MySQL en XAMPP, actualiza `password` en `database.ini`. El ejemplo usa el usuario `root` sin contraseña, que es el valor típico de una instalación local nueva; no uses esa configuración en un servidor público.
-5. Instala las dependencias en el mismo Python con el que ejecutas la aplicación:
+4. Ajusta `database.ini`: host, puerto, usuario, contraseña y nombre de base. El nombre general predeterminado es `sistema_hotelero`.
+5. Instala las dependencias:
 
    ```powershell
    python -m pip install -r requirements.txt
    ```
 
-## Iniciar la aplicación
-
-La primera ejecución crea la base `sistema_hotelero` y sus tablas en MySQL. Si las tablas están vacías, la aplicación inicia con sus 50 habitaciones predeterminadas.
+## Iniciar Flask
 
 ```powershell
-python main.py
+python run.py
 ```
 
-## Ver y editar datos
+Abre `http://127.0.0.1:5000`. La primera ejecución crea la base y las tablas si MySQL está disponible; si las tablas están vacías, carga las 50 habitaciones predeterminadas.
 
-Con XAMPP activo, visita `http://localhost/phpmyadmin` y abre la base `sistema_hotelero`. Puedes consultar y editar sus tablas desde ahí.
+## Variables opcionales
 
-Cierra la aplicación antes de modificar o eliminar filas en phpMyAdmin. La app mantiene una copia del estado en memoria y ejecuta guardados automáticos; si sigue abierta, puede volver a escribir los datos que tenía cargados. Al abrirla otra vez, cargará los cambios de MySQL.
+- `HOTEL_DB_HOST`
+- `HOTEL_DB_PORT`
+- `HOTEL_DB_USER`
+- `HOTEL_DB_PASSWORD`
+- `HOTEL_DB_NAME`
+- `HOTEL_SECRET_KEY`
 
-No elimines habitaciones de la tabla `habitaciones`: el sistema espera conservar las 50 habitaciones. Para limpiar pruebas, es más seguro borrar filas de `historial_reservas`, `pagos` o `notificaciones`, según corresponda.
+## MySQL Workbench
+
+Puedes inspeccionar el esquema `sistema_hotelero` y sus tablas. No elimines filas de `habitaciones` si quieres conservar las 50 habitaciones iniciales. Para pruebas, limpia preferentemente `historial_reservas`, `pagos` o `notificaciones`.

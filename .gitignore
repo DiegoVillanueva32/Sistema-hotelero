@@ -1,3 +1,6 @@
 database.ini
 __pycache__/
 *.py[cod]
+instance/
+.pytest_cache/
+.env

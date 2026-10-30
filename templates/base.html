@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es" class="h-full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Hotel Web{% endblock %}</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
+</head>
+<body class="h-full bg-slate-950 text-slate-100">
+  <div class="min-h-full lg:grid lg:grid-cols-[260px_1fr]">
+    <aside class="glass border-b border-slate-800 lg:border-b-0 lg:border-r lg:border-slate-800 lg:min-h-screen">
+      <div class="flex items-center justify-between px-6 py-5">
+        <a href="{{ url_for('main.dashboard') }}" class="text-xl font-black tracking-tight"><span class="text-teal-400">Hotel</span> Manager</a>
+      </div>
+      <nav class="grid grid-cols-2 gap-2 px-4 pb-4 lg:grid-cols-1">
+        {% set nav = [('dashboard','Panel'),('habitaciones','Habitaciones'),('checkin','Check-in'),('checkout','Check-out'),('reservas','Reservas'),('limpieza','Limpieza'),('pagos','Pagos')] %}
+        {% for endpoint, label in nav %}
+        <a href="{{ url_for('main.' ~ endpoint) }}" class="rounded-xl px-4 py-3 text-sm font-semibold text-slate-300 hover:bg-slate-800 hover:text-white {% if request.endpoint == 'main.' ~ endpoint %}bg-teal-500/15 text-teal-300{% endif %}">{{ label }}</a>
+        {% endfor %}
+      </nav>
+    </aside>
+    <main class="min-w-0 p-4 sm:p-6 lg:p-8">
+      {% if not database_available %}
+      <div class="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+        <strong>Base de datos no disponible.</strong> Inicia MySQL y verifica database.ini. {{ database_error }}
+      </div>
+      {% endif %}
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}<div class="mb-6 space-y-2">{% for category, message in messages %}<div class="rounded-xl px-4 py-3 text-sm {% if category == 'success' %}border border-teal-500/30 bg-teal-500/10 text-teal-200{% else %}border border-rose-500/30 bg-rose-500/10 text-rose-200{% endif %}">{{ message }}</div>{% endfor %}</div>{% endif %}
+      {% endwith %}
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</body>
+</html>
