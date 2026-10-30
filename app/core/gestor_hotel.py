@@ -170,8 +170,10 @@ class GestorHotel:
             return False, (f"⚠️ CLIENTE EN LISTA NEGRA.\n"
                            f"Motivo: {motivo_ln}\nRegistro bloqueado.")
 
-        if hora_actual < 10 and not autorizado_admin:
-            return False, "Check-in permitido solo desde las 10:00 AM."
+        if hora_actual < 8 and not autorizado_admin:
+            return False, "Check-in antes de las 08:00 requiere autorización administrativa."
+        if hora_actual >= 10 and not autorizado_admin:
+            return False, "Check-in después de las 10:00 requiere autorización administrativa."
 
         if hab.estado not in ["Disponible", "Reserva"]:
             return False, f"No se puede hacer Check-in. Estado actual: '{hab.estado}'."
@@ -179,7 +181,12 @@ class GestorHotel:
         estado_anterior = hab.estado
         hab.asignar_huesped(nombre, doc, "Ocupado")
         self._auditar_cambio_estado(hab, estado_anterior, f"Check-in de {nombre}")
-        self._registrar_auditoria("Check-in", id_hab, f"Huésped: {nombre}; documento: {doc}")
+        visitas_actuales = self.clientes_frecuentes.get(doc, 0) + 1
+        autorizacion = "Sí" if hora_actual >= 10 and autorizado_admin else "No"
+        self._registrar_auditoria(
+            "Check-in", id_hab,
+            f"Huésped: {nombre}; documento: {doc}; visitas: {visitas_actuales}; autorización administrativa: {autorizacion}"
+        )
         self.fechas_salida[id_hab] = datetime.datetime.now() + datetime.timedelta(days=1)
 
         if self.turno_actual["abierto"]:
@@ -187,7 +194,7 @@ class GestorHotel:
 
         self.clientes_frecuentes[doc] = self.clientes_frecuentes.get(doc, 0) + 1
 
-        msg_extra = " (EARLY CHECK-IN autorizado)" if hora_actual < 10 and autorizado_admin else ""
+        msg_extra = " (CHECK-IN autorizado por administrador)" if (hora_actual < 8 or hora_actual >= 10) and autorizado_admin else ""
         return True, f"Check-in exitoso en habitación {hab.id_habitacion} para {nombre} (Doc: {doc}).{msg_extra}"
 
     # ============================================================
@@ -199,6 +206,8 @@ class GestorHotel:
             return False, "La habitación no existe o no está ocupada."
 
         estado_anterior = hab.estado
+        nombre_huesped = hab.huesped_nombre or "—"
+        documento_huesped = hab.huesped_doc or "—"
         # 🔥 RF-30: guardar en historial ANTES de liberar
         self._registrar_historial(
             hab, estado_final="Check-out",
@@ -212,7 +221,10 @@ class GestorHotel:
         )
         hab.liberar_habitacion(estado_limpieza)
         self._auditar_cambio_estado(hab, estado_anterior, "Check-out")
-        self._registrar_auditoria("Check-out", id_hab, f"Estado resultante: {estado_limpieza}")
+        self._registrar_auditoria(
+            "Check-out", id_hab,
+            f"Huésped: {nombre_huesped}; documento: {documento_huesped}; hora: {datetime.datetime.now().strftime('%H:%M:%S')}; estado resultante: {estado_limpieza}"
+        )
         self.fechas_salida.pop(id_hab, None)
 
         if self.turno_actual["abierto"]:
@@ -534,7 +546,7 @@ class GestorHotel:
             monto = float(monto)
         except (TypeError, ValueError):
             return 0.0
-        if self.clientes_frecuentes.get(str(doc).strip(), 0) < 2:
+        if self.clientes_frecuentes.get(str(doc).strip(), 0) <= 5:
             return 0.0
         return round(monto * self.descuento_cliente_frecuente / 100, 2)
 
@@ -683,7 +695,7 @@ class GestorHotel:
     def obtener_lista_negra(self):
         return dict(self.lista_negra)
 
-    def obtener_clientes_frecuentes(self, minimo_visitas=2):
+    def obtener_clientes_frecuentes(self, minimo_visitas=6):
         return {doc: v for doc, v in self.clientes_frecuentes.items()
                 if v >= minimo_visitas}
 
@@ -691,8 +703,8 @@ class GestorHotel:
         doc_clean = doc.strip()
         if not doc_clean or not doc_clean.isdigit():
             return False, "Documento inválido (solo números)."
-        if visitas < 2:
-            return False, "Un cliente frecuente debe tener al menos 2 visitas."
+        if visitas < 6:
+            return False, "Un cliente frecuente debe tener más de 5 visitas (mínimo 6)."
         self.clientes_frecuentes[doc_clean] = visitas
         self._registrar_auditoria("Cliente frecuente", detalle=f"Documento: {doc_clean}; visitas: {visitas}")
         return True, f"Documento {doc_clean} marcado como CLIENTE FRECUENTE ({visitas} visitas)."

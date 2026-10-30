@@ -1,6 +1,7 @@
 import datetime
+import io
 
-from flask import Blueprint, flash, redirect, render_template, request, url_for
+from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
 
 from app.persistence.persistencia import validar_password_admin
 from app.services.hotel_service import hotel_service
@@ -77,13 +78,16 @@ def accion_habitacion(id_habitacion):
 def checkin():
     gestor = hotel_service.gestor
     ahora = datetime.datetime.now()
-    requiere_autorizacion = ahora.hour < 10
+    requiere_autorizacion = ahora.hour < 8 or ahora.hour >= 10
 
     if request.method == "POST":
         autorizacion_administrativa = request.form.get("administrador") == "1"
 
         if requiere_autorizacion and not autorizacion_administrativa:
-            flash("Antes de las 10:00 debe marcar la autorización administrativa e ingresar la contraseña del administrador.", "error")
+            if ahora.hour < 8:
+                flash("Antes de las 08:00 debe marcar la autorización administrativa e ingresar la contraseña del administrador.", "error")
+            else:
+                flash("Desde las 10:00 debe marcar la autorización administrativa e ingresar la contraseña del administrador.", "error")
             return redirect(url_for("main.checkin"))
 
         autorizado = not requiere_autorizacion
@@ -209,9 +213,9 @@ def clientes():
             ejecutar_accion(gestor.quitar_lista_negra, documento)
         elif accion == "marcar_frecuente":
             try:
-                visitas = int(request.form.get("visitas", "2") or 2)
+                visitas = int(request.form.get("visitas", "6") or 6)
             except ValueError:
-                visitas = 2
+                visitas = 6
             ejecutar_accion(gestor.marcar_cliente_frecuente, documento, visitas)
         return redirect(url_for("main.clientes"))
 
@@ -249,6 +253,132 @@ def reportes():
         ingresos=ingresos,
         resumen=gestor.obtener_resumen_indicadores(),
         auditoria=list(reversed(gestor.obtener_auditoria()))[:100],
+        clientes=gestor.clientes_frecuentes,
+        reservas=gestor.obtener_historial_reservas(),
+        turnos=gestor.obtener_historial_turnos(),
         fecha_inicio=fecha_inicio,
         fecha_fin=fecha_fin,
     )
+
+
+@bp.route("/turno", methods=["GET", "POST"])
+def turno():
+    gestor = hotel_service.gestor
+    if request.method == "POST":
+        accion = request.form.get("accion")
+        if accion == "abrir":
+            ejecutar_accion(gestor.abrir_turno, request.form.get("recepcionista", ""))
+        elif accion == "cerrar":
+            ejecutar_accion(gestor.cerrar_turno)
+        return redirect(url_for("main.turno"))
+
+    return render_template(
+        "turno.html",
+        turno=gestor.turno_actual,
+        historial=gestor.obtener_historial_turnos(),
+        arqueo=gestor.generar_arqueo(),
+    )
+
+
+@bp.route("/reportes/exportar/<formato>")
+def exportar_reporte(formato):
+    gestor = hotel_service.gestor
+    auditoria = gestor.obtener_auditoria()
+    clientes = gestor.clientes_frecuentes
+
+    if formato == "excel":
+        try:
+            from openpyxl import Workbook
+            from openpyxl.styles import Font, PatternFill
+        except ImportError:
+            flash("Excel requiere instalar openpyxl.", "error")
+            return redirect(url_for("main.reportes"))
+
+        libro = Workbook()
+        hoja = libro.active
+        hoja.title = "Registro general"
+        hoja.append(["Fecha", "Usuario / recepcionista", "Acción", "Habitación", "Detalle"])
+        for fila in auditoria:
+            hoja.append([fila["fecha"], fila["usuario"], fila["accion"], fila["id_habitacion"] or "—", fila["detalle"]])
+        for celda in hoja[1]:
+            celda.font = Font(bold=True, color="FFFFFF")
+            celda.fill = PatternFill("solid", fgColor="0F766E")
+        hoja.freeze_panes = "A2"
+
+        hoja_clientes = libro.create_sheet("Clientes y visitas")
+        hoja_clientes.append(["Documento", "Visitas", "Tipo", "Descuento próxima visita"])
+        for documento, visitas in sorted(clientes.items(), key=lambda item: item[0]):
+            frecuente = visitas > 5
+            hoja_clientes.append([documento, visitas, "Frecuente" if frecuente else "Regular", "10%" if frecuente else "0%"])
+        for celda in hoja_clientes[1]:
+            celda.font = Font(bold=True, color="FFFFFF")
+            celda.fill = PatternFill("solid", fgColor="0F766E")
+
+        hoja_pagos = libro.create_sheet("Pagos")
+        hoja_pagos.append(["Habitación", "Huésped", "Documento", "Base", "Descuento", "Total", "Método", "Fecha"])
+        for pago in gestor.obtener_pagos():
+            hoja_pagos.append([pago["id_habitacion"], pago["huesped"], pago["doc"], pago["monto_base"], pago["descuento"], pago["monto"], pago["metodo"], pago["fecha"]])
+        for hoja_temp in (hoja, hoja_clientes, hoja_pagos):
+            for columna in hoja_temp.columns:
+                hoja_temp.column_dimensions[columna[0].column_letter].width = 24
+
+        salida = io.BytesIO()
+        libro.save(salida)
+        salida.seek(0)
+        return Response(
+            salida.getvalue(),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": "attachment; filename=registro_hotel.xlsx"},
+        )
+
+    if formato == "pdf":
+        try:
+            from reportlab.lib import colors
+            from reportlab.lib.pagesizes import landscape, letter
+            from reportlab.lib.styles import getSampleStyleSheet
+            from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+        except ImportError:
+            flash("PDF requiere instalar reportlab.", "error")
+            return redirect(url_for("main.reportes"))
+
+        salida = io.BytesIO()
+        documento = SimpleDocTemplate(salida, pagesize=landscape(letter))
+        estilos = getSampleStyleSheet()
+        contenido = [Paragraph("Registro general del hotel", estilos["Title"]), Spacer(1, 12)]
+        filas = [["Fecha", "Recepcionista", "Acción", "Habitación", "Detalle"]]
+        for fila in auditoria[-100:]:
+            filas.append([fila["fecha"], fila["usuario"], fila["accion"], fila["id_habitacion"] or "—", fila["detalle"][:120]])
+        tabla = Table(filas, repeatRows=1)
+        tabla.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#0f766e")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("FONT", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("FONTSIZE", (0, 0), (-1, -1), 7),
+        ]))
+        contenido.append(tabla)
+        contenido.append(Spacer(1, 16))
+        contenido.append(Paragraph("Clientes y visitas", estilos["Heading2"]))
+        filas_clientes = [["Documento", "Visitas", "Categoría", "Descuento"]]
+        for documento_cliente, visitas in sorted(clientes.items(), key=lambda item: item[0]):
+            frecuente = visitas > 5
+            filas_clientes.append([documento_cliente, str(visitas), "Frecuente" if frecuente else "Regular", "10%" if frecuente else "0%"])
+        tabla_clientes = Table(filas_clientes, repeatRows=1)
+        tabla_clientes.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#334155")),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+            ("GRID", (0, 0), (-1, -1), 0.4, colors.grey),
+            ("FONT", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ]))
+        contenido.append(tabla_clientes)
+        documento.build(contenido)
+        salida.seek(0)
+        return Response(
+            salida.getvalue(),
+            mimetype="application/pdf",
+            headers={"Content-Disposition": "attachment; filename=registro_hotel.pdf"},
+        )
+
+    flash("Formato de exportación no válido.", "error")
+    return redirect(url_for("main.reportes"))

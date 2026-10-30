@@ -8,8 +8,9 @@
   <section class="card p-5"><p class="text-sm text-slate-400">Reservas registradas</p><p class="mt-2 text-4xl font-black text-violet-400">{{ reservas }}</p></section>
   <section class="card p-5"><p class="text-sm text-slate-400">Pagos acumulados</p><p class="mt-2 text-2xl font-black text-teal-400">${{ '%.2f'|format(pagos) }}</p></section>
 </div>
-<div class="mt-6 grid gap-6 lg:grid-cols-2">
-  <section class="card p-6"><h2 class="mb-5 text-lg font-bold">Estado de habitaciones</h2><div class="space-y-3">{% for estado, cantidad in estados.items() %}<div class="flex items-center justify-between rounded-xl bg-slate-950/40 px-4 py-3"><span>{{ estado }}</span><strong>{{ cantidad }}</strong></div>{% else %}<p class="text-slate-400">Sin datos.</p>{% endfor %}</div></section>
-  <section class="card p-6"><h2 class="mb-5 text-lg font-bold">Notificaciones</h2><div class="space-y-3">{% for notification in notifications %}<div class="rounded-xl border border-slate-700/50 px-4 py-3 text-sm text-slate-300">{{ notification }}</div>{% else %}<p class="text-slate-400">No hay novedades.</p>{% endfor %}</div></section>
+<div class="mt-6 grid gap-6 lg:grid-cols-3">
+  <section class="card p-6"><h2 class="mb-5 text-lg font-bold">Horario operativo</h2><div class="space-y-3 text-sm"><div class="rounded-xl bg-teal-500/10 px-4 py-3"><strong class="text-teal-300">08:00–09:59</strong><p class="mt-1 text-slate-400">Check-in normal</p></div><div class="rounded-xl bg-amber-500/10 px-4 py-3"><strong class="text-amber-300">Desde las 10:00</strong><p class="mt-1 text-slate-400">Check-in con autorización administrativa</p></div><div class="rounded-xl bg-violet-500/10 px-4 py-3"><strong class="text-violet-300">10:00–12:00</strong><p class="mt-1 text-slate-400">Check-out y limpieza de habitaciones</p></div></div></section>
+  <section class="card p-6"><h2 class="mb-5 text-lg font-bold">Estado de habitaciones</h2>
+<div class="space-y-3">{% for estado, cantidad in estados.items() %}<div class="flex items-center justify-between rounded-xl bg-slate-950/40 px-4 py-3"><span>{{ estado }}</span><strong>{{ cantidad }}</strong></div>{% else %}<p class="text-slate-400">Sin datos.</p>{% endfor %}</div></section>  <section class="card p-6"><h2 class="mb-5 text-lg font-bold">Notificaciones</h2><div class="space-y-3">{% for notification in notifications %}<div class="rounded-xl border border-slate-700/50 px-4 py-3 text-sm text-slate-300">{{ notification }}</div>{% else %}<p class="text-slate-400">No hay novedades.</p>{% endfor %}</div></section>
 </div>
 {% endblock %}
