@@ -7,6 +7,18 @@
 </div>
 
 {% if not piso_seleccionado %}
+<form class="card mb-6 grid gap-3 p-4 md:grid-cols-4" method="get">
+  <label class="text-sm text-slate-400">Piso
+    <select class="input-dark mt-2" name="piso">{% for opcion in range(1,6) %}<option value="{{ opcion }}">Piso {{ opcion }}</option>{% endfor %}</select>
+  </label>
+  <label class="text-sm text-slate-400">Tipo
+    <select class="input-dark mt-2" name="tipo">{% for opcion in ['Todos','Normal','Doble','Familiar'] %}<option value="{{ opcion }}" {% if tipo == opcion %}selected{% endif %}>{{ opcion }}</option>{% endfor %}</select>
+  </label>
+  <label class="text-sm text-slate-400">Estado
+    <select class="input-dark mt-2" name="estado">{% for opcion in ['Todos','Disponible','Ocupado','Reserva','En limpieza','Mantenimiento'] %}<option value="{{ opcion }}" {% if estado == opcion %}selected{% endif %}>{{ opcion }}</option>{% endfor %}</select>
+  </label>
+  <button class="btn self-end bg-teal-500 text-slate-950" type="submit">Ver piso y filtrar</button>
+</form>
 <div class="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
 {% for numero_piso, resumen in pisos.items() %}
 <a href="{{ url_for('main.habitaciones', piso=numero_piso) }}" class="card block p-6 transition hover:-translate-y-1 hover:border-teal-400/40">
@@ -18,10 +30,20 @@
 </div>
 {% else %}
 <form class="card mb-6 grid gap-3 p-4 md:grid-cols-[1fr_1fr_1fr_auto]" method="get">
-  <input type="hidden" name="piso" value="{{ piso_seleccionado }}">
-  <input class="input-dark" name="tipo" value="{{ tipo }}" placeholder="Tipo (Todos)">
-  <input class="input-dark" name="estado" value="{{ estado }}" placeholder="Estado (Todos)">
-  <button class="btn bg-teal-500 text-slate-950" type="submit">Filtrar</button>
+  <label class="text-sm text-slate-400">Piso
+    <select class="input-dark mt-2" name="piso">    {% for opcion in range(1,6) %}<option value="{{ opcion }}" {% if piso_seleccionado|int == opcion %}selected{% endif %}>Piso {{ opcion }}</option>{% endfor %}
+</select>  </label>
+  <label class="text-sm text-slate-400">Tipo
+    <select class="input-dark mt-2" name="tipo">
+      {% for opcion in ['Todos','Normal','Doble','Familiar'] %}<option value="{{ opcion }}" {% if tipo == opcion %}selected{% endif %}>{{ opcion }}</option>{% endfor %}
+    </select>
+  </label>
+  <label class="text-sm text-slate-400">Estado
+    <select class="input-dark mt-2" name="estado">
+      {% for opcion in ['Todos','Disponible','Ocupado','Reserva','En limpieza','Mantenimiento'] %}<option value="{{ opcion }}" {% if estado == opcion %}selected{% endif %}>{{ opcion }}</option>{% endfor %}
+    </select>
+  </label>
+  <button class="btn self-end bg-teal-500 text-slate-950" type="submit">Filtrar</button>
 </form>
 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 {% for h in habitaciones %}
