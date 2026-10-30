@@ -22,7 +22,7 @@ def _configuracion_mysql():
     if CONFIG_PATH.exists():
         config.read(CONFIG_PATH, encoding="utf-8")
     seccion = config["mysql"] if config.has_section("mysql") else {}
-    return {
+    configuracion = {
         "host": os.getenv("HOTEL_DB_HOST", seccion.get("host", "127.0.0.1")),
         "port": int(os.getenv("HOTEL_DB_PORT", seccion.get("port", "3306"))),
         "user": os.getenv("HOTEL_DB_USER", seccion.get("user", "root")),
@@ -30,6 +30,12 @@ def _configuracion_mysql():
         "database": os.getenv(
             "HOTEL_DB_NAME", seccion.get("database", "sistema_hotelero")),
     }
+    ssl_ca = os.getenv("HOTEL_DB_SSL_CA", "").strip()
+    if ssl_ca:
+        configuracion["ssl_ca"] = ssl_ca
+        configuracion["ssl_verify_cert"] = True
+        configuracion["ssl_verify_identity"] = True
+    return configuracion
 
 
 def validar_password_admin(password_ingresada):
