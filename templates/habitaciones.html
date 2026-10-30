@@ -24,13 +24,16 @@
 </form>
 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 {% for h in habitaciones %}
-<article class="card p-5">
-  <div class="flex items-start justify-between"><div><p class="text-xs font-bold text-slate-500">HABITACIÓN</p><h2 class="text-2xl font-black">{{ h.id_habitacion }}</h2></div><span class="status {% if h.estado == 'Disponible' %}bg-teal-500/15 text-teal-300{% elif h.estado == 'Ocupado' %}bg-rose-500/15 text-rose-300{% elif h.estado == 'Reserva' %}bg-violet-500/15 text-violet-300{% else %}bg-amber-500/15 text-amber-300{% endif %}">{{ h.estado }}</span></div>
-  <div class="mt-4 grid grid-cols-2 gap-2 text-sm"><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tipo</p><p class="font-bold">{{ h.tipo }}</p></div><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tarifa</p><p class="font-bold">${{ '%.0f'|format(h.precio) }}</p></div></div>
-  {% if h.huesped_nombre %}<p class="mt-4 text-sm text-slate-400">Huésped: <strong class="text-slate-200">{{ h.huesped_nombre }}</strong></p>{% endif %}
-  <form class="mt-4 flex gap-2" method="post" action="{{ url_for('main.accion_habitacion', id_habitacion=h.id_habitacion, piso=piso) }}">
-    {% if h.estado == 'Disponible' %}<input class="input-dark" name="motivo" placeholder="Motivo de mantenimiento"><button class="btn bg-amber-500 text-slate-950" name="accion" value="mantenimiento">Mant.</button>{% elif h.estado == 'Mantenimiento' %}<button class="btn bg-teal-500 text-slate-950" name="accion" value="finalizar_mantenimiento">Finalizar</button>{% elif h.estado == 'En limpieza' %}<button class="btn bg-teal-500 text-slate-950" name="accion" value="finalizar_limpieza">Finalizar limpieza</button>{% endif %}
-  </form>
+<article class="card p-5 transition hover:-translate-y-1 hover:border-teal-400/40">
+  {% if h.estado == 'Disponible' %}{% set destino = url_for('main.checkin', habitacion=h.id_habitacion) %}{% elif h.estado == 'Ocupado' %}{% set destino = url_for('main.checkout', habitacion=h.id_habitacion) %}{% elif h.estado == 'En limpieza' %}{% set destino = url_for('main.limpieza', habitacion=h.id_habitacion) %}{% elif h.estado == 'Reserva' %}{% set destino = url_for('main.reservas', habitacion=h.id_habitacion) %}{% elif h.estado == 'Mantenimiento' %}{% set destino = url_for('main.mantenimiento', habitacion=h.id_habitacion) %}{% endif %}
+  <a href="{{ destino }}" class="block">
+    <div class="flex items-start justify-between"><div><p class="text-xs font-bold text-slate-500">HABITACIÓN</p><h2 class="text-2xl font-black">{{ h.id_habitacion }}</h2></div><span class="status {% if h.estado == 'Disponible' %}bg-teal-500/15 text-teal-300{% elif h.estado == 'Ocupado' %}bg-rose-500/15 text-rose-300{% elif h.estado == 'Reserva' %}bg-violet-500/15 text-violet-300{% else %}bg-amber-500/15 text-amber-300{% endif %}">{{ h.estado }}</span></div>
+    <div class="mt-4 grid grid-cols-2 gap-2 text-sm"><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tipo</p><p class="font-bold">{{ h.tipo }}</p></div><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tarifa</p><p class="font-bold">${{ '%.0f'|format(h.precio) }}</p></div></div>
+    {% if h.huesped_nombre %}<p class="mt-4 text-sm text-slate-400">Huésped: <strong class="text-slate-200">{{ h.huesped_nombre }}</strong></p>{% endif %}
+    <p class="mt-4 text-sm font-bold text-teal-300">
+      {% if h.estado == 'Disponible' %}Abrir check-in →{% elif h.estado == 'Ocupado' %}Abrir check-out →{% elif h.estado == 'En limpieza' %}Gestionar limpieza →{% elif h.estado == 'Reserva' %}Gestionar reserva →{% elif h.estado == 'Mantenimiento' %}Gestionar mantenimiento →{% endif %}
+    </p>
+  </a>
 </article>
 {% else %}<p class="col-span-full card p-5 text-slate-400">No hay habitaciones con esos filtros.</p>{% endfor %}
 </div>
@@ -81,13 +84,16 @@
 </form>
 <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
 {% for h in habitaciones %}
-<article class="card p-5">
-  <div class="flex items-start justify-between"><div><p class="text-xs font-bold text-slate-500">HABITACIÓN</p><h2 class="text-2xl font-black">{{ h.id_habitacion }}</h2></div><span class="status {% if h.estado == 'Disponible' %}bg-teal-500/15 text-teal-300{% elif h.estado == 'Ocupado' %}bg-rose-500/15 text-rose-300{% elif h.estado == 'Reserva' %}bg-violet-500/15 text-violet-300{% else %}bg-amber-500/15 text-amber-300{% endif %}">{{ h.estado }}</span></div>
-  <div class="mt-4 grid grid-cols-2 gap-2 text-sm"><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tipo</p><p class="font-bold">{{ h.tipo }}</p></div><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tarifa</p><p class="font-bold">${{ '%.0f'|format(h.precio) }}</p></div></div>
-  {% if h.huesped_nombre %}<p class="mt-4 text-sm text-slate-400">Huésped: <strong class="text-slate-200">{{ h.huesped_nombre }}</strong></p>{% endif %}
-  <form class="mt-4 flex gap-2" method="post" action="{{ url_for('main.accion_habitacion', id_habitacion=h.id_habitacion, piso=piso_seleccionado) }}">
-    {% if h.estado == 'Disponible' %}<input class="input-dark" name="motivo" placeholder="Motivo de mantenimiento"><button class="btn bg-amber-500 text-slate-950" name="accion" value="mantenimiento">Mant.</button>{% elif h.estado == 'Mantenimiento' %}<button class="btn bg-teal-500 text-slate-950" name="accion" value="finalizar_mantenimiento">Finalizar</button>{% elif h.estado == 'En limpieza' %}<button class="btn bg-teal-500 text-slate-950" name="accion" value="finalizar_limpieza">Finalizar limpieza</button>{% endif %}
-  </form>
+<article class="card p-5 transition hover:-translate-y-1 hover:border-teal-400/40">
+  {% if h.estado == 'Disponible' %}{% set destino = url_for('main.checkin', habitacion=h.id_habitacion) %}{% elif h.estado == 'Ocupado' %}{% set destino = url_for('main.checkout', habitacion=h.id_habitacion) %}{% elif h.estado == 'En limpieza' %}{% set destino = url_for('main.limpieza', habitacion=h.id_habitacion) %}{% elif h.estado == 'Reserva' %}{% set destino = url_for('main.reservas', habitacion=h.id_habitacion) %}{% elif h.estado == 'Mantenimiento' %}{% set destino = url_for('main.mantenimiento', habitacion=h.id_habitacion) %}{% endif %}
+  <a href="{{ destino }}" class="block">
+    <div class="flex items-start justify-between"><div><p class="text-xs font-bold text-slate-500">HABITACIÓN</p><h2 class="text-2xl font-black">{{ h.id_habitacion }}</h2></div><span class="status {% if h.estado == 'Disponible' %}bg-teal-500/15 text-teal-300{% elif h.estado == 'Ocupado' %}bg-rose-500/15 text-rose-300{% elif h.estado == 'Reserva' %}bg-violet-500/15 text-violet-300{% else %}bg-amber-500/15 text-amber-300{% endif %}">{{ h.estado }}</span></div>
+    <div class="mt-4 grid grid-cols-2 gap-2 text-sm"><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tipo</p><p class="font-bold">{{ h.tipo }}</p></div><div class="rounded-xl bg-slate-950/40 p-3"><p class="text-slate-500">Tarifa</p><p class="font-bold">${{ '%.0f'|format(h.precio) }}</p></div></div>
+    {% if h.huesped_nombre %}<p class="mt-4 text-sm text-slate-400">Huésped: <strong class="text-slate-200">{{ h.huesped_nombre }}</strong></p>{% endif %}
+    <p class="mt-4 text-sm font-bold text-teal-300">
+      {% if h.estado == 'Disponible' %}Abrir check-in →{% elif h.estado == 'Ocupado' %}Abrir check-out →{% elif h.estado == 'En limpieza' %}Gestionar limpieza →{% elif h.estado == 'Reserva' %}Gestionar reserva →{% elif h.estado == 'Mantenimiento' %}Gestionar mantenimiento →{% endif %}
+    </p>
+  </a>
 </article>
 {% else %}<p class="col-span-full text-slate-400">No hay habitaciones con esos filtros.</p>{% endfor %}
 </div>

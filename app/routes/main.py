@@ -142,6 +142,7 @@ def checkin():
     return render_template(
         "checkin.html",
         habitaciones=disponibles,
+        habitacion_seleccionada=request.args.get("habitacion", ""),
         requiere_autorizacion=requiere_autorizacion,
         hora_actual=ahora.strftime("%H:%M"),
     )
@@ -154,7 +155,11 @@ def checkout():
         ejecutar_accion(gestor.procesar_checkout, request.form.get("habitacion", ""))
         return redirect(url_for("main.checkout"))
     ocupadas = [h for h in gestor.consultar_matriz().values() if h.estado == "Ocupado"]
-    return render_template("checkout.html", habitaciones=ocupadas)
+    return render_template(
+        "checkout.html",
+        habitaciones=ocupadas,
+        habitacion_seleccionada=request.args.get("habitacion", ""),
+    )
 
 
 @bp.route("/reservas", methods=["GET", "POST"])
@@ -185,6 +190,7 @@ def reservas():
     return render_template(
         "reservas.html",
         habitaciones=disponibles,
+        habitacion_seleccionada=request.args.get("habitacion", ""),
         reservas=gestor.obtener_historial_reservas(),
     )
 
@@ -207,8 +213,29 @@ def limpieza():
     return render_template(
         "limpieza.html",
         habitaciones=en_limpieza,
+        habitacion_seleccionada=request.args.get("habitacion", ""),
         empleados=gestor.empleados_limpieza,
         hoja=gestor.hoja_trabajo_limpieza(),
+    )
+
+
+@bp.route("/mantenimiento", methods=["GET", "POST"])
+def mantenimiento():
+    gestor = hotel_service.gestor
+    if request.method == "POST":
+        accion = request.form.get("accion")
+        id_habitacion = request.form.get("habitacion", "")
+        if accion == "poner":
+            ejecutar_accion(gestor.poner_en_mantenimiento, id_habitacion, request.form.get("motivo", ""))
+        elif accion == "finalizar":
+            ejecutar_accion(gestor.quitar_mantenimiento, id_habitacion, True)
+        return redirect(url_for("main.mantenimiento", habitacion=id_habitacion))
+
+    habitaciones = list(gestor.consultar_matriz().values())
+    return render_template(
+        "mantenimiento.html",
+        habitaciones=habitaciones,
+        habitacion_seleccionada=request.args.get("habitacion", ""),
     )
 
 

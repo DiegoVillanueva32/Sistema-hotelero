@@ -7,8 +7,8 @@
   <form class="card mt-6 space-y-4 p-6" method="post">
     <label class="block text-sm text-slate-400">Habitación
       <select class="input-dark mt-2" name="habitacion" required>
-        <option value="" disabled selected>Selecciona una habitación disponible</option>
-        {% for h in habitaciones %}<option value="{{ h.id_habitacion }}">{{ h.id_habitacion }} - {{ h.tipo }} - {{ h.estado }}</option>{% endfor %}
+        <option value="" disabled {% if not habitacion_seleccionada %}selected{% endif %}>Selecciona una habitación disponible</option>
+        {% for h in habitaciones %}<option value="{{ h.id_habitacion }}" {% if habitacion_seleccionada == h.id_habitacion|string %}selected{% endif %}>{{ h.id_habitacion }} - {{ h.tipo }} - {{ h.estado }}</option>{% endfor %}
       </select>
     </label>
     {% if not habitaciones %}<p class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">No hay habitaciones disponibles para check-in.</p>{% endif %}
