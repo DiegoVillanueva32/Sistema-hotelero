@@ -176,7 +176,7 @@ def checkin():
 
         autorizado = not requiere_autorizacion
         if autorizacion_administrativa:
-            password_ingresada = request.form.get("password_admin", "")
+            password_ingresada = request.form.get("password_admin", "").strip()
             autorizado = validar_password_admin(password_ingresada)
             if not autorizado:
                 flash("Contraseña administrativa incorrecta.", "error")
