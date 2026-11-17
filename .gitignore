@@ -8,3 +8,6 @@ __pycache__/
 instance/
 *.pyc
 .vercel
+
+# Credenciales privadas
+CREDENCIALES*.txt
