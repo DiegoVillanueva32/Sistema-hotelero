@@ -6,6 +6,7 @@
   <title>Ingreso recepcionista | Hotel Manager</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles/main.css') }}">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
 </head>
 <body class="min-h-full bg-slate-950 text-slate-100">
   <main class="grid min-h-screen place-items-center p-4">
@@ -34,7 +35,21 @@
         <input class="input-dark mt-2" type="password" name="password" autocomplete="current-password" required>
       </label>
       <button class="btn w-full bg-teal-500 text-slate-950" type="submit">Ingresar al sistema</button>
+      <p class="text-center text-xs text-slate-500">Recepción y administración usan contraseñas distintas. La de administración habilita las acciones de administrador.</p>
     </form>
   </main>
+<script>
+  // Protección CSRF: añade el token a todos los formularios POST.
+  document.addEventListener('DOMContentLoaded', function () {
+    var token = document.querySelector('meta[name="csrf-token"]');
+    if (!token) return;
+    document.querySelectorAll('form').forEach(function (f) {
+      if ((f.method || '').toLowerCase() !== 'post') return;
+      var campo = document.createElement('input');
+      campo.type = 'hidden'; campo.name = 'csrf_token'; campo.value = token.content;
+      f.appendChild(campo);
+    });
+  });
+</script>
 </body>
 </html>

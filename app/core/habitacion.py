@@ -10,6 +10,7 @@ class Habitacion:
 
         self.huesped_nombre = None
         self.huesped_doc = None
+        self.huesped_telefono = None
         self.empleado_limpieza = None
 
         # ===== RESERVA (RF-21 / RF-26 / RF-29) =====
@@ -21,9 +22,16 @@ class Habitacion:
         self.hora_inicio_limpieza = None   # datetime.datetime
         self.hora_fin_limpieza = None      # datetime.datetime
 
-    def asignar_huesped(self, nombre, doc, estado, fecha_entrada=None, fecha_salida=None):
+        # RF-21 / RF-23 / RF-28: hora límite de llegada (HH:MM)
+        self.hora_limite = "18:00"
+
+    def asignar_huesped(self, nombre, doc, estado, fecha_entrada=None, fecha_salida=None,
+                        telefono=None, hora_limite=None):
         self.huesped_nombre = nombre
         self.huesped_doc = doc
+        self.huesped_telefono = telefono
+        if hora_limite:
+            self.hora_limite = hora_limite
         self.estado = estado
         if fecha_entrada is not None:
             self.fecha_entrada = fecha_entrada
@@ -33,6 +41,8 @@ class Habitacion:
     def liberar_habitacion(self, nuevo_estado="En limpieza"):
         self.huesped_nombre = None
         self.huesped_doc = None
+        self.huesped_telefono = None
+        self.hora_limite = "18:00"
         self.estado = nuevo_estado
         self.fecha_entrada = None
         self.fecha_salida = None

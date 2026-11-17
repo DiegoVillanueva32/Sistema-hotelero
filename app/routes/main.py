@@ -1,16 +1,16 @@
+import datetime
 import io
-import os
-import hmac
 
 from flask import Blueprint, Response, flash, redirect, render_template, request, session, url_for
 
-from app.persistence.persistencia import validar_password_admin
+from app.seguridad import (es_admin, es_password_admin,
+                           rol_por_password, solo_admin)
 from app.services.hotel_service import hotel_service
 from app.timezone import hora_local
 
 bp = Blueprint("main", __name__)
 
-RECEPCION_PASSWORD = os.getenv("HOTEL_RECEPCION_PASSWORD", "recep_hotel99")
+HORA_AUTORIZACION = 10  # RF-12: antes de esta hora el check-in requiere autorización
 
 
 @bp.before_app_request
@@ -28,14 +28,16 @@ def login():
     if request.method == "POST":
         recepcionista = request.form.get("recepcionista", "").strip()
         password = request.form.get("password", "")
+        rol = rol_por_password(password)
         if not recepcionista:
             flash("Ingresa el nombre del recepcionista.", "error")
-        elif not hmac.compare_digest(password, RECEPCION_PASSWORD):
+        elif rol is None:
             flash("Contraseña incorrecta.", "error")
         else:
             session.clear()
             session["recepcion_autorizado"] = True
             session["recepcionista"] = recepcionista
+            session["rol"] = rol
             session.permanent = False
             destino = request.args.get("next")
             if (
@@ -83,6 +85,9 @@ def dashboard():
     estados = {}
     for habitacion in habitaciones:
         estados[habitacion.estado] = estados.get(habitacion.estado, 0) + 1
+    ahora = hora_local()
+    # RF-15: a partir de las 12:00 se alerta por ocupadas sin check-out
+    alerta_checkout = gestor.habitaciones_sin_checkout_pendiente() if ahora.hour >= 12 else []
     return render_template(
         "dashboard.html",
         total=len(habitaciones),
@@ -91,6 +96,8 @@ def dashboard():
         reservas=len(gestor.historial_reservas),
         pagos=sum(p["monto"] for p in gestor.obtener_pagos()),
         notifications=gestor.obtener_notificaciones()[:5],
+        alerta_checkout=alerta_checkout,
+        hora_limite_checkout=ahora.hour >= 12,
     )
 
 
@@ -143,7 +150,7 @@ def accion_habitacion(id_habitacion):
     if accion == "mantenimiento":
         ejecutar_accion(gestor.poner_en_mantenimiento, id_habitacion, request.form.get("motivo", ""))
     elif accion == "finalizar_mantenimiento":
-        ejecutar_accion(gestor.quitar_mantenimiento, id_habitacion, True)
+        ejecutar_accion(gestor.quitar_mantenimiento, id_habitacion, es_admin())
     elif accion == "asignar_limpieza":
         ejecutar_accion(gestor.asignar_limpieza, id_habitacion, request.form.get("empleado", "Empleado 1"))
     elif accion == "finalizar_limpieza":
@@ -162,25 +169,29 @@ def accion_habitacion(id_habitacion):
 def checkin():
     gestor = hotel_service.gestor
     ahora = hora_local()
-    requiere_autorizacion = ahora.hour < 8 or ahora.hour >= 10
+    requiere_autorizacion = ahora.hour < HORA_AUTORIZACION
 
     if request.method == "POST":
         autorizacion_administrativa = request.form.get("administrador") == "1"
 
         if requiere_autorizacion and not autorizacion_administrativa:
-            if ahora.hour < 8:
-                flash("Antes de las 08:00 debe marcar la autorización administrativa e ingresar la contraseña del administrador.", "error")
-            else:
-                flash("Desde las 10:00 debe marcar la autorización administrativa e ingresar la contraseña del administrador.", "error")
+            flash("Antes de las 10:00 debe marcar la autorización administrativa e ingresar la contraseña del administrador.", "error")
             return redirect(url_for("main.checkin"))
 
         autorizado = not requiere_autorizacion
         if autorizacion_administrativa:
             password_ingresada = request.form.get("password_admin", "").strip()
-            autorizado = validar_password_admin(password_ingresada)
+            autorizado = es_password_admin(password_ingresada)
             if not autorizado:
                 flash("Contraseña administrativa incorrecta.", "error")
                 return redirect(url_for("main.checkin"))
+
+        fecha_salida_texto = request.form.get("fecha_salida", "").strip()
+        try:
+            fecha_salida = datetime.date.fromisoformat(fecha_salida_texto)
+        except ValueError:
+            flash("La fecha de salida es obligatoria (formato AAAA-MM-DD).", "error")
+            return redirect(url_for("main.checkin"))
 
         ejecutar_accion(
             gestor.procesar_checkin,
@@ -189,6 +200,8 @@ def checkin():
             request.form.get("documento", "").strip(),
             ahora.hour,
             autorizado,
+            telefono=request.form.get("telefono", "").strip(),
+            fecha_salida=fecha_salida,
         )
         return redirect(url_for("main.checkin"))
 
@@ -238,6 +251,8 @@ def reservas():
                 request.form.get("documento", "").strip(),
                 request.form.get("fecha_entrada", "").strip(),
                 request.form.get("fecha_salida", "").strip(),
+                hora_limite=request.form.get("hora_limite", "").strip(),
+                telefono=request.form.get("telefono", "").strip(),
             )
         elif accion == "cancelar":
             ejecutar_accion(gestor.cancelar_reserva, request.form.get("habitacion", ""))
@@ -294,7 +309,7 @@ def mantenimiento():
         if accion == "poner":
             ejecutar_accion(gestor.poner_en_mantenimiento, id_habitacion, request.form.get("motivo", ""))
         elif accion == "finalizar":
-            ejecutar_accion(gestor.quitar_mantenimiento, id_habitacion, True)
+            ejecutar_accion(gestor.quitar_mantenimiento, id_habitacion, es_admin())
         return redirect(url_for("main.mantenimiento", habitacion=id_habitacion))
 
     habitaciones = list(gestor.consultar_matriz().values())
@@ -346,6 +361,7 @@ def buscar_huesped():
 
 
 @bp.route("/administracion", methods=["GET", "POST"])
+@solo_admin
 def administracion():
     gestor = hotel_service.gestor
     if request.method == "POST":
@@ -371,7 +387,7 @@ def pagos():
     gestor = hotel_service.gestor
     if request.method == "POST":
         try:
-            monto = float(request.form.get("monto", "0") or 0)
+            monto = float(request.form.get("monto", "") or 0)
         except ValueError:
             monto = 0
         ejecutar_accion(
@@ -442,6 +458,7 @@ def clientes():
 
 
 @bp.route("/reportes")
+@solo_admin
 def reportes():
     gestor = hotel_service.gestor
     fecha_inicio = request.args.get("fecha_inicio")
@@ -498,6 +515,7 @@ def turno():
 
 
 @bp.route("/reportes/exportar/<formato>")
+@solo_admin
 def exportar_reporte(formato):
     gestor = hotel_service.gestor
     auditoria = gestor.obtener_auditoria()

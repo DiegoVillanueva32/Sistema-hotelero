@@ -14,10 +14,12 @@
     {% if not habitaciones %}<p class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">No hay habitaciones disponibles para check-in.</p>{% endif %}
     <label class="block text-sm text-slate-400">Nombre completo<input class="input-dark mt-2" name="nombre" autocomplete="name" required></label>
     <label class="block text-sm text-slate-400">Documento<input class="input-dark mt-2" name="documento" autocomplete="off" required></label>
+    <label class="block text-sm text-slate-400">Teléfono<input class="input-dark mt-2" name="telefono" type="tel" autocomplete="tel" required></label>
+    <label class="block text-sm text-slate-400">Fecha de salida<input class="input-dark mt-2" name="fecha_salida" type="date" required></label>
     {% if requiere_autorizacion %}
-    <p class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">Hora actual {{ hora_actual }}: fuera del horario normal de 08:00 a 09:59. Se requiere autorización administrativa.</p>
+    <p class="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-100">Hora actual {{ hora_actual }}: antes de las 10:00 el check-in requiere autorización administrativa.</p>
     {% else %}
-    <p class="rounded-xl border border-teal-500/30 bg-teal-500/10 p-3 text-sm text-teal-200">Hora actual {{ hora_actual }}: check-in autorizado sin contraseña.</p>
+    <p class="rounded-xl border border-teal-500/30 bg-teal-500/10 p-3 text-sm text-teal-200">Hora actual {{ hora_actual }}: check-in dentro del horario normal (desde las 10:00).</p>
     {% endif %}
 
     <label class="flex items-center gap-3 rounded-xl border border-slate-700 bg-slate-950/40 p-4 text-sm text-slate-300">

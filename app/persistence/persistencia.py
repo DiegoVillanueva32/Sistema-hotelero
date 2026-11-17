@@ -5,7 +5,6 @@ Guarda y restaura TODO el estado del GestorHotel.
 """
 import configparser
 import datetime
-import hmac
 import os
 from pathlib import Path
 import re
@@ -36,35 +35,6 @@ def _configuracion_mysql():
         configuracion["ssl_verify_cert"] = True
         configuracion["ssl_verify_identity"] = True
     return configuracion
-
-
-def validar_password_admin(password_ingresada):
-    """Valida el acceso administrativo sin registrar ni mostrar la contraseña."""
-    if not isinstance(password_ingresada, str):
-        return False
-    password_ingresada = password_ingresada.strip()
-
-    config = configparser.ConfigParser(interpolation=None)
-    if CONFIG_PATH.exists():
-        config.read(CONFIG_PATH, encoding="utf-8")
-
-    password_admin = os.getenv("HOTEL_ADMIN_PASSWORD")
-    if not password_admin and config.has_section("admin"):
-        password_admin = config.get("admin", "password", fallback="")
-    if not password_admin:
-        password_admin = _configuracion_mysql()["password"]
-    if not password_admin:
-        password_admin = "admin123"
-    if password_admin:
-        password_admin = password_admin.strip()
-
-    if not password_admin:
-        return False
-
-    try:
-        return hmac.compare_digest(password_ingresada, password_admin)
-    except TypeError:
-        return False
 
 
 def _conectar(sin_base=False):
@@ -122,7 +92,8 @@ def inicializar_bd():
         id VARCHAR(10) PRIMARY KEY, piso INT, tipo VARCHAR(30), precio DECIMAL(12,2),
         estado VARCHAR(30), huesped_nombre VARCHAR(255), huesped_doc VARCHAR(50),
         empleado_limpieza VARCHAR(50), fecha_entrada DATE, fecha_salida DATE,
-        hora_inicio_limpieza DATETIME, hora_fin_limpieza DATETIME
+        hora_inicio_limpieza DATETIME, hora_fin_limpieza DATETIME,
+        huesped_telefono VARCHAR(30), hora_limite VARCHAR(5)
     );
     CREATE TABLE IF NOT EXISTS motivos_mantenimiento (
         id_habitacion VARCHAR(10) PRIMARY KEY, motivo TEXT
@@ -181,6 +152,12 @@ def inicializar_bd():
     for sentencia in esquema.split(";"):
         if sentencia.strip():
             c.execute(sentencia)
+    c.execute("SHOW COLUMNS FROM habitaciones")
+    columnas_hab = {fila[0] for fila in c.fetchall()}
+    if "huesped_telefono" not in columnas_hab:
+        c.execute("ALTER TABLE habitaciones ADD COLUMN huesped_telefono VARCHAR(30) NULL")
+    if "hora_limite" not in columnas_hab:
+        c.execute("ALTER TABLE habitaciones ADD COLUMN hora_limite VARCHAR(5) NULL")
     c.execute("SHOW COLUMNS FROM pagos")
     columnas_pagos = {fila[0] for fila in c.fetchall()}
     if "monto_base" not in columnas_pagos:
@@ -202,13 +179,17 @@ def guardar_estado(gestor):
     c.execute("DELETE FROM habitaciones")
     for h in gestor.habitaciones.values():
         c.execute(
-            "INSERT INTO habitaciones VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            "INSERT INTO habitaciones (id, piso, tipo, precio, estado, huesped_nombre, "
+            "huesped_doc, empleado_limpieza, fecha_entrada, fecha_salida, "
+            "hora_inicio_limpieza, hora_fin_limpieza, huesped_telefono, hora_limite) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
             (h.id_habitacion, h.piso, h.tipo, h.precio, h.estado,
              h.huesped_nombre, h.huesped_doc, h.empleado_limpieza,
              h.fecha_entrada.isoformat() if h.fecha_entrada else None,
              h.fecha_salida.isoformat() if h.fecha_salida else None,
              _fecha_hora_para_bd(h.hora_inicio_limpieza),
-             _fecha_hora_para_bd(h.hora_fin_limpieza))
+             _fecha_hora_para_bd(h.hora_fin_limpieza),
+             h.huesped_telefono, h.hora_limite)
         )
 
     # ---------- Motivos de mantenimiento ----------
@@ -322,12 +303,15 @@ def cargar_estado(gestor):
     c = conn.cursor()
 
     # ---------- Habitaciones ----------
-    filas = _consultar_todos(c, "SELECT * FROM habitaciones")
+    filas = _consultar_todos(
+        c, "SELECT id, piso, tipo, precio, estado, huesped_nombre, huesped_doc, "
+           "empleado_limpieza, fecha_entrada, fecha_salida, hora_inicio_limpieza, "
+           "hora_fin_limpieza, huesped_telefono, hora_limite FROM habitaciones")
     if filas:
         gestor.habitaciones.clear()
         for fila in filas:
             (id_h, piso, tipo, precio, estado, hn, hd, el,
-             fe, fs, hil, hfl) = fila
+             fe, fs, hil, hfl, tel, hlim) = fila
             hab = Habitacion(id_h, piso, tipo, float(precio))
             hab.estado = estado
             hab.huesped_nombre = hn
@@ -337,6 +321,8 @@ def cargar_estado(gestor):
             hab.fecha_salida = _fecha_desde_bd(fs)
             hab.hora_inicio_limpieza = _fecha_hora_desde_bd(hil)
             hab.hora_fin_limpieza = _fecha_hora_desde_bd(hfl)
+            hab.huesped_telefono = tel
+            hab.hora_limite = hlim or "18:00"
             gestor.habitaciones[id_h] = hab
 
     # ---------- Motivos mantenimiento ----------

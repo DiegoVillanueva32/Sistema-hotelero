@@ -14,8 +14,13 @@ def create_app(config=None):
         static_folder="../static",
         instance_relative_config=True,
     )
+    from app.seguridad import clave_secreta, csrf_token, es_admin, validar_csrf
+
     app.config.update(
-        SECRET_KEY=os.getenv("HOTEL_SECRET_KEY", "desarrollo-cambiar-en-produccion"),
+        SECRET_KEY=clave_secreta(),
+        SESSION_COOKIE_HTTPONLY=True,
+        SESSION_COOKIE_SAMESITE="Lax",
+        SESSION_COOKIE_SECURE=os.getenv("HOTEL_COOKIE_SECURE", "1") == "1",
         JSON_SORT_KEYS=False,
     )
     if config:
@@ -70,6 +75,23 @@ def create_app(config=None):
         return {
             "database_available": app.extensions["database_available"],
             "database_error": app.extensions.get("database_error"),
+            "csrf_token": csrf_token,
+            "es_admin": es_admin,
         }
+
+    @app.before_request
+    def proteger_formularios():
+        return validar_csrf()
+
+    @app.after_request
+    def cabeceras_seguridad(respuesta):
+        respuesta.headers.setdefault("X-Content-Type-Options", "nosniff")
+        respuesta.headers.setdefault("X-Frame-Options", "DENY")
+        respuesta.headers.setdefault("Referrer-Policy", "same-origin")
+        respuesta.headers.setdefault(
+            "Content-Security-Policy",
+            "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; "
+            "style-src 'self' 'unsafe-inline'; img-src 'self' data:; frame-ancestors 'none'")
+        return respuesta
 
     return app
