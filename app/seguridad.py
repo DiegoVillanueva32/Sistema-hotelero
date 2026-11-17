@@ -86,6 +86,12 @@ def validar_csrf():
 
 
 def clave_secreta():
-    """Clave de sesión. Debe definirse en HOTEL_SECRET_KEY para que las sesiones
-    sigan válidas entre instancias (Vercel)."""
-    return os.getenv("HOTEL_SECRET_KEY") or secrets.token_hex(32)
+    """Clave de sesión: HOTEL_SECRET_KEY si existe; si no, el secreto compartido
+    guardado en la base (válido entre instancias). Sin base, una clave aleatoria."""
+    if os.getenv("HOTEL_SECRET_KEY"):
+        return os.getenv("HOTEL_SECRET_KEY")
+    try:
+        from app.persistence.persistencia import obtener_secreto_sesion
+        return obtener_secreto_sesion()
+    except Exception:
+        return secrets.token_hex(32)

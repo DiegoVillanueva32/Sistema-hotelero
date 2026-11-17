@@ -17,7 +17,6 @@ def create_app(config=None):
     from app.seguridad import clave_secreta, csrf_token, es_admin, validar_csrf
 
     app.config.update(
-        SECRET_KEY=clave_secreta(),
         SESSION_COOKIE_HTTPONLY=True,
         SESSION_COOKIE_SAMESITE="Lax",
         SESSION_COOKIE_SECURE=os.getenv("HOTEL_COOKIE_SECURE", "1") == "1",
@@ -35,7 +34,9 @@ def create_app(config=None):
         gestor.actualizar_estados_reservas()
         guardar_estado(gestor)
         app.extensions["database_available"] = True
+        app.config["SECRET_KEY"] = clave_secreta()
     except Exception as exc:
+        app.config["SECRET_KEY"] = clave_secreta()
         app.extensions["database_available"] = False
         app.extensions["database_error"] = str(exc)
 

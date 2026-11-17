@@ -170,6 +170,21 @@ def inicializar_bd():
     conn.close()
 
 
+def obtener_secreto_sesion():
+    """Clave de sesión compartida por todas las instancias: se crea una sola vez en la base."""
+    import secrets
+    conn = _conectar()
+    c = conn.cursor()
+    c.execute("INSERT IGNORE INTO configuracion (clave,valor) VALUES (%s,%s)",
+              ("session_secret", secrets.token_hex(32)))
+    conn.commit()
+    c.execute("SELECT valor FROM configuracion WHERE clave=%s", ("session_secret",))
+    valor = c.fetchone()[0]
+    c.close()
+    conn.close()
+    return valor
+
+
 def guardar_estado(gestor):
     """Persiste todo el estado del GestorHotel en MySQL."""
     conn = _conectar()
@@ -270,7 +285,8 @@ def guardar_estado(gestor):
         )
 
     # ---------- Configuración ----------
-    c.execute("DELETE FROM configuracion")
+    c.execute("DELETE FROM configuracion WHERE clave = %s",
+              ("descuento_cliente_frecuente",))
     c.execute("INSERT INTO configuracion (clave,valor) VALUES (%s,%s)",
               ("descuento_cliente_frecuente", str(gestor.descuento_cliente_frecuente)))
 
